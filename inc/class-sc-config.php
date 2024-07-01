@@ -31,19 +31,19 @@ class SC_Config {
 		$this->defaults = array(
 			'enable_page_caching'              => array(
 				'default'   => false,
-				'sanitizer' => array( $this, 'boolval' ),
+				'sanitizer' => 'boolval',
 			),
 			'advanced_mode'                    => array(
 				'default'   => false,
-				'sanitizer' => array( $this, 'boolval' ),
+				'sanitizer' => 'boolval',
 			),
 			'enable_in_memory_object_caching'  => array(
 				'default'   => false,
-				'sanitizer' => array( $this, 'boolval' ),
+				'sanitizer' => 'boolval',
 			),
 			'enable_gzip_compression'          => array(
 				'default'   => false,
-				'sanitizer' => array( $this, 'boolval' ),
+				'sanitizer' => 'boolval',
 			),
 			'in_memory_cache'                  => array(
 				'default'   => 'memcached',
@@ -63,28 +63,17 @@ class SC_Config {
 			),
 			'enable_url_exemption_regex'       => array(
 				'default'   => false,
-				'sanitizer' => array( $this, 'boolval' ),
+				'sanitizer' => 'boolval',
 			),
 			'page_cache_enable_rest_api_cache' => array(
 				'default'   => false,
-				'sanitizer' => array( $this, 'boolval' ),
+				'sanitizer' => 'boolval',
 			),
 			'page_cache_restore_headers'       => array(
 				'default'   => false,
-				'sanitizer' => array( $this, 'boolval' ),
+				'sanitizer' => 'boolval',
 			),
 		);
-	}
-
-	/**
-	 * Make sure we support old PHP with boolval
-	 *
-	 * @param  string $value Value to check.
-	 * @since  1.0
-	 * @return boolean
-	 */
-	public function boolval( $value ) {
-		return (bool) $value;
 	}
 
 	/**
@@ -179,7 +168,7 @@ class SC_Config {
 
 		// Delete network config if not network activated
 		if ( 'config-network.php' !== $file_name ) {
-			@unlink( $config_dir . '/config-network.php', true );
+			@unlink( $config_dir . '/config-network.php' );
 		}
 
 		return true;
@@ -217,7 +206,7 @@ class SC_Config {
 			delete_option( 'sc_simple_cache' );
 		}
 
-		@unlink( $config_dir . '/config-network.php', true );
+		@unlink( $config_dir . '/config-network.php' );
 
 		if ( ! @unlink( $config_dir . '/' . $this->get_config_file_name() ) ) {
 			return false;

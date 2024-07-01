@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Simple Cache
+ * Plugin Name: Simple Cache - AJK Mod
  * Plugin URI: https://taylorlovett.com
  * Description: A simple caching plugin that just works.
  * Author: Taylor Lovett
@@ -14,43 +14,28 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SC_VERSION', '2.0.0' );
-define( 'SC_PATH', dirname( __FILE__ ) );
+// I'm not using multisite and I'm not sure this is correct
+// if ( is_multisite() ) {
+// 	$active_plugins = get_site_option( 'active_sitewide_plugins' );
+// 	if ( isset( $active_plugins[ plugin_basename( __FILE__ ) ] ) )
+// 		define( 'SC_IS_NETWORK', true );
+// }
+defined( 'SC_IS_NETWORK' ) || define( 'SC_IS_NETWORK', false );
 
-$active_plugins = get_site_option( 'active_sitewide_plugins' );
-
-if ( is_multisite() && isset( $active_plugins[ plugin_basename( __FILE__ ) ] ) ) {
-	define( 'SC_IS_NETWORK', true );
-} else {
-	define( 'SC_IS_NETWORK', false );
-}
-
-require_once SC_PATH . '/inc/pre-wp-functions.php';
-require_once SC_PATH . '/inc/functions.php';
-require_once SC_PATH . '/inc/class-sc-notices.php';
-require_once SC_PATH . '/inc/class-sc-settings.php';
-require_once SC_PATH . '/inc/class-sc-config.php';
-require_once SC_PATH . '/inc/class-sc-advanced-cache.php';
-require_once SC_PATH . '/inc/class-sc-object-cache.php';
-require_once SC_PATH . '/inc/class-sc-cron.php';
+require_once __DIR__ . '/inc/pre-wp-functions.php';
+require_once __DIR__ . '/inc/functions.php';
+require_once __DIR__ . '/inc/class-sc-notices.php';
+require_once __DIR__ . '/inc/class-sc-settings.php';
+require_once __DIR__ . '/inc/class-sc-config.php';
+require_once __DIR__ . '/inc/class-sc-advanced-cache.php';
+require_once __DIR__ . '/inc/class-sc-object-cache.php';
+require_once __DIR__ . '/inc/class-sc-cron.php';
 
 SC_Settings::factory();
 SC_Advanced_Cache::factory();
 SC_Object_Cache::factory();
 SC_Cron::factory();
 SC_Notices::factory();
-
-/**
- * Load text domain
- *
- * @since 1.0
- */
-function sc_load_textdomain() {
-
-	load_plugin_textdomain( 'simple-cache', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
-}
-add_action( 'plugins_loaded', 'sc_load_textdomain' );
-
 
 /**
  * Add settings link to plugin actions
@@ -60,16 +45,14 @@ add_action( 'plugins_loaded', 'sc_load_textdomain' );
  * @since  1.0
  * @return array
  */
-function sc_filter_plugin_action_links( $plugin_actions, $plugin_file ) {
+function sc_filter_plugin_action_links( $links, $file ) {
 
-	$new_actions = array();
-
-	if ( basename( dirname( __FILE__ ) ) . '/simple-cache.php' === $plugin_file ) {
-		/* translators: Param 1 is link to settings page. */
-		$new_actions['sc_settings'] = '<a href="' . esc_url( admin_url( 'options-general.php?page=simple-cache' ) ) . '">' . esc_html__( 'Settings', 'simple-cache' ) . '</a>';
+	if ( 'simple-cache/simple-cache.php' === $file ) {// && current_user_can( 'manage_options' )// also could avoid hard-coding plugin name: basename( __DIR__ ) .'/'. basename( __FILE__ ) 
+		$links = (array) $links;
+		$links[] = '<a href="' . admin_url( 'options-general.php?page=simple-cache' ) . '">Settings</a>';// this isn't correct for network is it? I think it's network_admin_url('settings.php')
 	}
 
-	return array_merge( $new_actions, $plugin_actions );
+	return $links;
 }
 add_filter( 'plugin_action_links', 'sc_filter_plugin_action_links', 10, 2 );
 
@@ -80,17 +63,30 @@ add_filter( 'plugin_action_links', 'sc_filter_plugin_action_links', 10, 2 );
  * @since 1.0
  */
 function sc_deactivate( $network ) {
-	if ( ! apply_filters( 'sc_disable_auto_edits', false ) ) {
-		SC_Advanced_Cache::factory()->clean_up();
-		SC_Advanced_Cache::factory()->toggle_caching( false );
-		SC_Object_Cache::factory()->clean_up();
-	}
-
+	SC_Advanced_Cache::factory()->clean_up();
+	SC_Advanced_Cache::factory()->toggle_caching( false );
+	SC_Object_Cache::factory()->clean_up();
 	SC_Config::factory()->clean_up();
-
 	sc_cache_flush( $network );
 }
 add_action( 'deactivate_' . plugin_basename( __FILE__ ), 'sc_deactivate' );
+
+/**
+ * Would prefer to only delete cache when uninstalling
+ * But it would really be a good idea to flush cache after a day of being deactivated
+ * and I dont think I can because the functions wouldn't be included
+ * or... can I include like this in an anonymous function?
+ * https://github.com/WordPress/wordpress-develop/blob/0cb8475c0d07d23893b1d73d755eda5f12024585/src/wp-admin/includes/plugin.php#L1252
+ *  or even trigger that uninstall function
+ */
+function sc_uninstall() {
+	// SC_Advanced_Cache::factory()->clean_up();
+	// SC_Advanced_Cache::factory()->toggle_caching( false );
+	// SC_Object_Cache::factory()->clean_up();
+	SC_Config::factory()->clean_up();
+	sc_cache_flush( true );// $network attribute?
+}
+// register_uninstall_hook( __FILE__, 'sc_uninstall' );
 
 /**
  * Create config file
@@ -106,5 +102,3 @@ function sc_activate( $network ) {
 	}
 }
 add_action( 'activate_' . plugin_basename( __FILE__ ), 'sc_activate' );
-
-

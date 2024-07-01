@@ -5,6 +5,30 @@
  * @package  simple-cache
  */
 
+
+// add_action('shutdown', function(){ error_log( "shutdown connection_status: " . connection_status());});
+
+add_action( 'wp_footer', 'sc_flag_page_done', 99999999 );
+function sc_flag_page_done() {
+	define( 'SC_FLAG_PAGE_DONE', TRUE );
+	// error_log('flag page finished loading ' . $_SERVER['REQUEST_URI']);
+}
+
+if ( !empty( $GLOBALS['sc_cache_logged_in'] ) ) {
+// 	add_filter( 'show_admin_bar', '__return_false' );
+// 	add_action( 'wp_footer', 'sc_wp_admin_bar_placeholder', 1000 );
+	add_action( 'template_redirect', 'sc_load_logged_in_cache', 1 );// admin bar gets initiated on 0
+}
+
+function sc_wp_admin_bar_placeholder() {
+	echo "<!-- sc-cache--wp_admin_bar_placeholder -->";
+}
+
+function sc_load_logged_in_cache(){
+	// add_filter( 'show_admin_bar', '__return_true', 11 );
+	sc_serve_file_cache( get_current_user_id() );
+}
+
 /**
  * Clear the cache
  *
@@ -35,7 +59,7 @@ function sc_cache_flush( $network_wide = false ) {
 	} else {
 		$url_parts = wp_parse_url( home_url() );
 
-		$path = sc_get_cache_dir() . '/' . untrailingslashit( $url_parts['host'] ) . '/';
+		$path = sc_get_cache_dir() . '/' . untrailingslashit( $url_parts['host'] ) . '/';// TODO host can be undefined...
 
 		if ( ! empty( $url_parts['path'] ) && '/' !== $url_parts['path'] ) {
 			$path .= trim( $url_parts['path'], '/' );
@@ -66,30 +90,28 @@ function sc_verify_file_access() {
 
 	$errors = array();
 
-	if ( ! apply_filters( 'sc_disable_auto_edits', false ) ) {
-		// First check wp-config.php.
-		if ( ! @is_writable( ABSPATH . 'wp-config.php' ) && ! @is_writable( ABSPATH . '../wp-config.php' ) ) {
-			$errors[] = 'wp-config';
-		}
+	// First check wp-config.php.
+	if ( ! @is_writable( ABSPATH . 'wp-config.php' ) && ! @is_writable( ABSPATH . '../wp-config.php' ) ) {
+		$errors[] = 'wp-config';
+	}
 
-		// Now check wp-content
-		if ( ! @is_writable( untrailingslashit( WP_CONTENT_DIR ) ) ) {
-			$errors[] = 'wp-content';
-		}
+	// Now check wp-content
+	if ( ! @is_writable( untrailingslashit( WP_CONTENT_DIR ) ) ) {
+		$errors[] = 'wp-content';
+	}
 
-		// Make sure config directory or parent is writeable
-		if ( file_exists( sc_get_config_dir() ) ) {
-			if ( ! @is_writable( sc_get_config_dir() ) ) {
+	// Make sure config directory or parent is writeable
+	if ( file_exists( sc_get_config_dir() ) ) {
+		if ( ! @is_writable( sc_get_config_dir() ) ) {
+			$errors[] = 'config';
+		}
+	} else {
+		if ( file_exists( dirname( sc_get_config_dir() ) ) ) {
+			if ( ! @is_writable( dirname( sc_get_config_dir() ) ) ) {
 				$errors[] = 'config';
 			}
 		} else {
-			if ( file_exists( dirname( sc_get_config_dir() ) ) ) {
-				if ( ! @is_writable( dirname( sc_get_config_dir() ) ) ) {
-					$errors[] = 'config';
-				}
-			} else {
-				$errors[] = 'config';
-			}
+			$errors[] = 'config';
 		}
 	}
 

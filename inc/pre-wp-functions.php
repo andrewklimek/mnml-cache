@@ -15,7 +15,16 @@
  * @return string
  */
 function sc_file_cache( $buffer, $flags ) {
+
+	if ( ! defined( 'SC_FLAG_PAGE_DONE' ) || ! SC_FLAG_PAGE_DONE ) {
+		error_log('page didnt finish loading ' . $_SERVER['REQUEST_URI']);
+		return $buffer;
+	}
+
 	global $post;
+
+
+	// error_log( "buffer connection_status: " . connection_status());
 
 	$cache_dir = sc_get_cache_dir();
 
@@ -80,6 +89,10 @@ function sc_file_cache( $buffer, $flags ) {
 		$file_extension = '.json';
 	}
 
+	if ( !empty( $GLOBALS['sc_cache_logged_in'] ) && $id = get_current_user_id() ) {
+		$file_extension = ".{$id}{$file_extension}";
+	}
+
 	// Prevent mixed content when there's an http request but the site URL uses https.
 	$home_url = get_home_url();
 
@@ -91,9 +104,9 @@ function sc_file_cache( $buffer, $flags ) {
 		$buffer         = str_replace( esc_url( $http_home_url ), esc_url( $https_home_url ), $buffer );
 	}
 
-	if ( preg_match( '#</html>#i', $buffer ) ) {
-		$buffer .= "\n<!-- Cache served by Simple Cache - Last modified: " . gmdate( 'D, d M Y H:i:s', $modified_time ) . " GMT -->\n";
-	}
+	// if ( preg_match( '#</html>#i', $buffer ) ) {
+	// 	$buffer .= "\n<!-- Cache served by Simple Cache - Last modified: " . gmdate( 'D, d M Y H:i:s', $modified_time ) . " GMT -->\n";
+	// }
 
 	// Save the response body.
 	if ( ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) && function_exists( 'gzencode' ) ) {
@@ -104,6 +117,8 @@ function sc_file_cache( $buffer, $flags ) {
 		touch( $path . '/index' . $file_extension, $modified_time );
 	}
 
+	header( 'Last-Modified: ' . gmdate( 'D, d M Y H:i:s', $modified_time ) . ' GMT' );
+
 	// Save the resonse headers.
 	if ( ! empty( $GLOBALS['sc_config']['page_cache_restore_headers'] ) ) {
 		file_put_contents( $path . '/headers.json', wp_json_encode( headers_list() ) );
@@ -113,7 +128,6 @@ function sc_file_cache( $buffer, $flags ) {
 
 	header( 'X-Simple-Cache: MISS' );
 
-	header( 'Last-Modified: ' . gmdate( 'D, d M Y H:i:s', $modified_time ) . ' GMT' );
 
 	if ( function_exists( 'ob_gzhandler' ) && ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) ) {
 		return ob_gzhandler( $buffer, $flags );
@@ -149,13 +163,22 @@ function sc_get_cache_path() {
  *
  * @since 1.0
  */
-function sc_serve_file_cache() {
+function sc_serve_file_cache($do_logged_in=false) {
+
+	if ( false === $do_logged_in && !empty( $GLOBALS['sc_cache_logged_in'] ) ) {
+		return;
+	}
+
 	$cache_dir = ( defined( 'SC_CACHE_DIR' ) ) ? rtrim( SC_CACHE_DIR, '/' ) : rtrim( WP_CONTENT_DIR, '/' ) . '/cache/simple-cache';
 
 	$file_name = 'index.';
 
-	if ( function_exists( 'gzencode' ) && ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) ) {
+	if ( ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) && function_exists( 'gzencode' ) ) {
 		$file_name = 'index.gzip.';
+	}
+
+	if ( $do_logged_in ) {// could be set to user ID 0 
+		$file_name .= "{$do_logged_in}.";
 	}
 
 	$html_path   = $cache_dir . '/' . rtrim( sc_get_url_path(), '/' ) . '/' . $file_name . 'html';
@@ -167,11 +190,13 @@ function sc_serve_file_cache() {
 	} elseif ( @file_exists( $json_path ) && @is_readable( $json_path ) ) {
 		$path = $json_path;
 		header( 'Content-Type: application/json; charset=UTF-8' );
+	} else {
+		return;// not cached
 	}
 
-	$modified_time = (int) @filemtime( $path );
+	$modified_time = @filemtime( $path );
 
-	if ( ! empty( $modified_time ) && ! empty( $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) && strtotime( $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) === $modified_time ) {
+	if ( $modified_time && ! empty( $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) && strtotime( $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) === $modified_time ) {
 		if ( function_exists( 'gzencode' ) && ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) ) {
 			header( 'Content-Encoding: gzip' );
 		}
@@ -180,29 +205,47 @@ function sc_serve_file_cache() {
 		exit;
 	}
 
-	if ( isset( $path ) ) {
-
-		// Restore the headers if a `header.json` file is found.
-		if ( @file_exists( $header_path ) && @is_readable( $header_path ) ) {
-			$headers = json_decode( @file_get_contents( $header_path ) );
-			foreach ( $headers as $header ) {
-				header( $header );
-			}
-		} else {
-			header( 'Cache-Control: no-cache' );
+	// Restore the headers if a `header.json` file is found.
+	if ( @file_exists( $header_path ) && @is_readable( $header_path ) ) {
+		$headers = json_decode( @file_get_contents( $header_path ) );
+		foreach ( $headers as $header ) {
+			header( $header );
 		}
+	} else {
+		header( 'Cache-Control: max-age=' . DAY_IN_SECONDS );
+		// header( 'Cache-Control: no-cache' );
 
-		// Set the GZIP header if we are serving gzipped content.
-		if ( function_exists( 'gzencode' ) && ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) ) {
-			header( 'Content-Encoding: gzip' );
+		if ( $modified_time ) {
+			header( 'Last-Modified: ' . gmdate( 'D, d M Y H:i:s', $modified_time ) . ' GMT' );
 		}
-
-		header( 'X-Simple-Cache: HIT' );
-
-		@readfile( $path );
-
-		exit;
 	}
+
+	// Set the GZIP header if we are serving gzipped content.
+	if ( function_exists( 'gzencode' ) && ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) ) {
+		header( 'Content-Encoding: gzip' );
+	}
+
+	header( 'X-Simple-Cache: HIT' );
+
+	// if ( ! $do_logged_in ) {// could be set to user ID 0 
+		@readfile( $path );
+		exit;
+	// }
+
+	// Add Admin Bar
+	// ob_start();
+	// wp_admin_bar_render();
+	// $admin_bar = ob_get_clean();
+	// if ( ! $admin_bar ) {
+	// 	@readfile( $path );
+	// 	exit;
+	// }
+	// $content = @file_get_contents( $path );
+	// str_replace( '<!-- sc-cache--wp_admin_bar_placeholder -->', $admin_bar, $content );
+	// print $content;
+	// wp_admin_bar_render();
+	// exit;
+
 }
 
 /**
@@ -223,6 +266,7 @@ function sc_get_cache_dir() {
  */
 function sc_get_config_dir() {
 	return ( defined( 'SC_CONFIG_DIR' ) ) ? rtrim( SC_CONFIG_DIR, '/' ) : rtrim( WP_CONTENT_DIR, '/' ) . '/sc-config';
+	// 	return ( defined( 'SC_CONFIG_DIR' ) ? SC_CONFIG_DIR : WP_CONTENT_DIR );
 }
 
 /**
