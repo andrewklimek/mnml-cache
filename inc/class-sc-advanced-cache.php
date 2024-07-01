@@ -127,8 +127,17 @@ class SC_Advanced_Cache {
 	 */
 	public function clean_up() {
 
-		return @unlink( untrailingslashit( WP_CONTENT_DIR ) . '/advanced-cache.php' );
+		$ret = true;
 
+		if ( ! @unlink( WP_CONTENT_DIR . '/advanced-cache.php' ) ) {
+			$ret = false;
+		}
+
+		if ( ! @rmdir( WP_CONTENT_DIR . '/cache/simple-cache' ) ) {
+			$ret = false;
+		}
+
+		return $ret;
 	}
 
 	/**

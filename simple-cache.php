@@ -63,11 +63,11 @@ add_filter( 'plugin_action_links', 'sc_filter_plugin_action_links', 10, 2 );
  * @since 1.0
  */
 function sc_deactivate( $network ) {
+	sc_cache_flush( $network );
 	SC_Advanced_Cache::factory()->clean_up();
 	SC_Advanced_Cache::factory()->toggle_caching( false );
 	SC_Object_Cache::factory()->clean_up();
 	SC_Config::factory()->clean_up();
-	sc_cache_flush( $network );
 }
 add_action( 'deactivate_' . plugin_basename( __FILE__ ), 'sc_deactivate' );
 
