@@ -25,19 +25,19 @@ if ( ! isset( $_SERVER['REQUEST_METHOD'] ) || 'GET' !== $_SERVER['REQUEST_METHOD
 
 // Don't cache if logged in.
 if ( ! empty( $_COOKIE ) ) {
-	// $wp_cookies = array( 'wordpressuser_', 'wordpresspass_', 'wordpress_sec_', 'wordpress_logged_in_' );
-	// just use 1, should be ok? 
+	// logged in cookie is named 'wordpress_logged_in_{hash}' and value is: username|expiration|token|hmac
 	// https://github.com/WordPress/WordPress/blob/5bcb08099305b4572d2aeb97548d6a514291cc33/wp-includes/default-constants.php#L247
 	// https://github.com/WordPress/WordPress/blob/bc0c01b1ac747606882dad4a899a84f288ef6bde/wp-includes/user.php#L543
-
 	foreach ( $_COOKIE as $key => $value ) {
-		// foreach ( $wp_cookies as $cookie ) {
-			if ( strpos( $key, 'wordpress_logged_in_' ) !== false ) {
-				// Logged in!
+		if ( strpos( $key, 'wordpress_logged_in_' ) !== false ) {
+			// found logged in cookie... is it expired?
+			$cparts = explode( '|', $value );
+			if ( count( $cparts ) === 4 && is_numeric( $cparts[1] ) && $cparts[1] > time() ) {
+				// still logged in!
 				$GLOBALS['sc_cache_logged_in'] = 0;
-				break;
 			}
-		// }
+			break;
+		}
 	}
 
 	if ( ! empty( $_COOKIE['sc_commented_posts'] ) ) {
@@ -61,6 +61,7 @@ if ( $only_cache ) {
 	if ( in_array( explode('?', $_SERVER['REQUEST_URI'] )[0], $only_cache) ) {
 		if ( isset( $GLOBALS['sc_cache_logged_in'] ) ) $GLOBALS['sc_cache_logged_in'] = 1;
 		sc_serve_file_cache();
+		// error_log('ob_start - only cache');
 		ob_start( 'sc_file_cache' );
 		return;
 	} else {
@@ -95,5 +96,5 @@ if ( ! empty( $GLOBALS['sc_config']['advanced_mode'] ) && ! empty( $GLOBALS['sc_
 if ( isset( $GLOBALS['sc_cache_logged_in'] ) ) $GLOBALS['sc_cache_logged_in'] = true;
 
 sc_serve_file_cache();
-
+// error_log('ob_start');
 ob_start( 'sc_file_cache' );
