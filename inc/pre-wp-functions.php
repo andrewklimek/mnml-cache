@@ -89,10 +89,6 @@ function sc_file_cache( $buffer, $flags ) {
 		$file_extension = '.json';
 	}
 
-	if ( !empty( $GLOBALS['sc_cache_logged_in'] ) && $id = get_current_user_id() ) {
-		$file_extension = ".{$id}{$file_extension}";
-	}
-
 	// Prevent mixed content when there's an http request but the site URL uses https.
 	$home_url = get_home_url();
 
@@ -104,9 +100,13 @@ function sc_file_cache( $buffer, $flags ) {
 		$buffer         = str_replace( esc_url( $http_home_url ), esc_url( $https_home_url ), $buffer );
 	}
 
-	// if ( preg_match( '#</html>#i', $buffer ) ) {
-	// 	$buffer .= "\n<!-- Cache served by Simple Cache - Last modified: " . gmdate( 'D, d M Y H:i:s', $modified_time ) . " GMT -->\n";
-	// }
+	if ( $file_extension == '.html' ) {
+		$buffer .= "\n<!-- cached by Simple Cache at " . gmdate( 'd M Y H:i:s', $modified_time ) . " UTC -->";
+	}
+
+	if ( !empty( $GLOBALS['sc_cache_logged_in'] ) && $id = get_current_user_id() ) {
+		$file_extension = ".{$id}{$file_extension}";
+	}
 
 	// Save the response body.
 	if ( ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) && function_exists( 'gzencode' ) ) {

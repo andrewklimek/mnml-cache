@@ -71,19 +71,19 @@ if ( $only_cache ) {
 
 
 $file_extension = $_SERVER['REQUEST_URI'];
-$file_extension = preg_replace( '#^(.*?)\?.*$#', '$1', $file_extension );
-$file_extension = trim( preg_replace( '#^.*\.(.*)$#', '$1', $file_extension ) );
+$file_extension = preg_replace( '<^(.*?)\?.*$>', '$1', $file_extension );
+$file_extension = trim( preg_replace( '<^.*\.(.*)$>', '$1', $file_extension ) );
 
 // Don't cache disallowed extensions. Prevents wp-cron.php, xmlrpc.php, etc.
-if ( ! preg_match( '#index\.php$#i', $_SERVER['REQUEST_URI'] ) && in_array( $file_extension, array( 'php', 'xml', 'xsl' ), true ) ) {
+if ( ! preg_match( '<index\.php$>i', $_SERVER['REQUEST_URI'] ) && in_array( $file_extension, [ 'php', 'xml', 'xsl' ] ) ) {
 	return;
 }
 
 // Deal with optional cache exceptions.
 if ( ! empty( $GLOBALS['sc_config']['advanced_mode'] ) && ! empty( $GLOBALS['sc_config']['cache_exception_urls'] ) ) {
-	$exceptions = preg_split( '#(\n|\r)#', $GLOBALS['sc_config']['cache_exception_urls'] );
+	$exceptions = preg_split( '<[\r\n]>', $GLOBALS['sc_config']['cache_exception_urls'], 0, PREG_SPLIT_NO_EMPTY );
 
-	$regex = ( ! empty( $GLOBALS['sc_config']['enable_url_exemption_regex'] ) ) ? true : false;
+	$regex = ! empty( $GLOBALS['sc_config']['enable_url_exemption_regex'] );
 
 	foreach ( $exceptions as $exception ) {
 		if ( sc_url_exception_match( $exception, $regex ) ) {
