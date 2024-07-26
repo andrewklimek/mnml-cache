@@ -298,72 +298,32 @@ function sc_load_config() {
 /**
  * Return true of exception url matches current url
  *
- * @param  string $exception Exceptions to check URL against.
+ * @param  string $rule Exceptions to check URL against.
  * @param  bool   $regex Whether to check with regex or not.
  * @since  1.6
  * @return boolean
  */
-function sc_url_exception_match( $exception, $regex = false ) {
-	if ( preg_match( '#^[\s]*$#', $exception ) ) {
-		return false;
+function sc_url_exception_match( $rule, $regex = false ) {
+
+	$rule = trim( $rule );
+
+	if ( ! $rule ) return false;
+
+	$path = $_SERVER['REQUEST_URI'];
+
+	if ( $regex ) {
+		return (bool) preg_match( '<' . $rule . '>', $path );
 	}
+	
+	$begins_with = ( '*' === substr( $rule, -1 ) );
+	
+	$rule = strtolower( trim( $rule, '*/' ) );
+	$path = strtolower( trim( $path, '/' ) );
 
-	$exception = trim( $exception );
-
-	if ( ! preg_match( '#^/#', $exception ) ) {
-
-		$url = rtrim( 'http' . ( isset( $_SERVER['HTTPS'] ) ? 's' : '' ) . '://' . "{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}", '/' );
-
-		if ( $regex ) {
-			if ( preg_match( '#^' . $exception . '$#', $url ) ) {
-				// Exception match!
-				return true;
-			}
-		} elseif ( preg_match( '#\*$#', $exception ) ) {
-			$filtered_exception = str_replace( '*', '', $exception );
-
-			if ( preg_match( '#^' . $filtered_exception . '#', $url ) ) {
-				// Exception match!
-				return true;
-			}
-		} else {
-			$exception = rtrim( $exception, '/' );
-
-			if ( strtolower( $exception ) === strtolower( $url ) ) {
-				// Exception match!
-				return true;
-			}
-		}
+	if ( $begins_with ) {
+		return ( 0 === stripos( $path, $rule ) );
 	} else {
-		$path = $_SERVER['REQUEST_URI'];
-
-		if ( $regex ) {
-			if ( preg_match( '#^' . $exception . '$#', $path ) ) {
-				// Exception match!
-				return true;
-			}
-		} elseif ( preg_match( '#\*$#', $exception ) ) {
-			$filtered_exception = preg_replace( '#/?\*#', '', $exception );
-
-			if ( preg_match( '#^' . $filtered_exception . '#i', $path ) ) {
-				// Exception match!
-				return true;
-			}
-		} else {
-			if ( '/' !== $path ) {
-				$path = rtrim( $path, '/' );
-			}
-
-			if ( '/' !== $exception ) {
-				$exception = rtrim( $exception, '/' );
-			}
-
-			if ( strtolower( $exception ) === strtolower( $path ) ) {
-				// Exception match!
-				return true;
-			}
-		}
+		return ( $rule === $path );
 	}
 
-	return false;
 }

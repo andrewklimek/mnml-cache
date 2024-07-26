@@ -87,7 +87,7 @@ if ( ! empty( $GLOBALS['sc_config']['advanced_mode'] ) && ! empty( $GLOBALS['sc_
 
 	foreach ( $exceptions as $exception ) {
 		if ( sc_url_exception_match( $exception, $regex ) ) {
-			// Exception match.
+			// error_log("skipping exception $exception");
 			return;
 		}
 	}
