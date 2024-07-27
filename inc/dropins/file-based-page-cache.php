@@ -70,13 +70,13 @@ if ( $only_cache ) {
 }
 
 
-$file_extension = $_SERVER['REQUEST_URI'];
-$file_extension = preg_replace( '<^(.*?)\?.*$>', '$1', $file_extension );
-$file_extension = trim( preg_replace( '<^.*\.(.*)$>', '$1', $file_extension ) );
-
-// Don't cache disallowed extensions. Prevents wp-cron.php, xmlrpc.php, etc.
-if ( ! preg_match( '<index\.php$>i', $_SERVER['REQUEST_URI'] ) && in_array( $file_extension, [ 'php', 'xml', 'xsl' ] ) ) {
-	return;
+// Don't cache disallowed extensions. Prevents wp-cron.php, xmlrpc.php, etc. @TODO
+if ( strpos( $_SERVER['REQUEST_URI'], '.' ) && strpos( $_SERVER['REQUEST_URI'], 'index.php' ) === false ) {
+	$file_extension = array_reverse( explode('.', explode('?', $_SERVER['REQUEST_URI'] )[0] ) )[0];
+	if ( in_array( $file_extension, [ 'php', 'xml', 'xsl' ] ) ) {
+		error_log( "skipping due to extension: " . $_SERVER['REQUEST_URI'] );
+		return;
+	}
 }
 
 // Deal with optional cache exceptions.
