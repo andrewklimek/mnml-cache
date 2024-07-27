@@ -18,9 +18,8 @@ class SC_Settings {
 	 * @since 1.0
 	 */
 	public function setup() {
-		add_action( 'admin_enqueue_scripts', array( $this, 'action_admin_enqueue_scripts_styles' ) );
 
-		add_action( 'load-settings_page_simple-cache', array( $this, 'update' ) );
+		add_action( 'rest_api_init', array( $this, 'register_api_endpoint' ) );
 		add_action( 'load-settings_page_simple-cache', array( $this, 'purge_cache' ) );
 
 		if ( SC_IS_NETWORK ) {
@@ -29,7 +28,46 @@ class SC_Settings {
 			add_action( 'admin_menu', array( $this, 'action_admin_menu' ) );
 			add_action( 'admin_bar_menu', array( $this, 'admin_bar_menu' ) );
 		}
+	}
 
+	public function register_api_endpoint() {
+		register_rest_route( 'mnmlcache/v1', '/settings', [ 'methods' => 'POST', 'callback' => array( $this, 'update' ),
+			'permission_callback' => function(){ return current_user_can('manage_options');}
+		] );
+	}
+
+	/**
+	 * Define Settings and call settings builder
+	 * 
+	 */
+	public function settings_page() {
+		
+		$main = [
+			'enable_page_caching' => [],
+			'enable_gzip_compression' => [],
+			'page_cache_length' => [ 'type' => 'number' ],
+			'page_cache_length_unit' => [ 'options' => ['minutes','hours','days','weeks'], 'type' => 'select' ],
+			'advanced_mode' => [],
+			'advanced' => ['type' => 'section', 'show' => 'advanced_mode'],
+			'cache_exception_urls' => [ 'type' => 'code' ],
+			'enable_url_exemption_regex' => [],
+			'page_cache_enable_rest_api_cache' => [],
+			'page_cache_restore_headers' => [ 'desc' => 'When enabled, the plugin will save the response headers present when the page is cached and it will send send them again when it serves the cached page. This is recommended when caching the REST API.'],
+			'advanced_end' => ['type' => 'section_end' ],
+			'enable_in_memory_object_caching' => [],
+			'in_memory_cache' => [ 'options' => [ 'memcached', 'redis' ] ],
+		];
+		
+		$options = [ 'sc_simple_cache' => $main ];
+		
+		/**
+		 *  Build Settings Page using framework in settings_page.php
+		 **/
+		$values = SC_Config::factory()->get();
+		$endpoint = rest_url('mnmlcache/v1/settings');
+		$title = "Simple Cache";
+		require( __DIR__.'/settings-page.php' );// needs $options, $endpoint, $title
+		
 	}
 
 	/**
@@ -38,7 +76,7 @@ class SC_Settings {
 	 * @since  1.7
 	 */
 	public function network_admin_menu() {
-		add_submenu_page( 'settings.php', 'Simple Cache', 'Simple Cache', 'manage_options', 'simple-cache', array( $this, 'screen_options' ) );
+		add_submenu_page( 'settings.php', 'Simple Cache', 'Simple Cache', 'manage_options', 'simple-cache', array( $this, 'settings_page' ) );
 	}
 
 	/**
@@ -64,27 +102,12 @@ class SC_Settings {
 	}
 
 	/**
-	 * Enqueue settings screen js/css
-	 *
-	 * @since 1.0
-	 */
-	public function action_admin_enqueue_scripts_styles() {
-
-		global $pagenow;
-
-		if ( ( 'options-general.php' === $pagenow || 'settings.php' === $pagenow ) && ! empty( $_GET['page'] ) && 'simple-cache' === $_GET['page'] ) {
-			wp_enqueue_script( 'sc-settings', plugins_url( '/dist/js/settings.js', dirname( __FILE__ ) ), array( 'jquery' ), '2.0', true );
-			wp_enqueue_style( 'sc-settings', plugins_url( '/dist/css/settings-styles.css', dirname( __FILE__ ) ), array(), '2.0' );
-		}
-	}
-
-	/**
 	 * Add options page
 	 *
 	 * @since 1.0
 	 */
 	public function action_admin_menu() {
-		add_submenu_page( 'options-general.php', 'Simple Cache', 'Simple Cache', 'manage_options', 'simple-cache', array( $this, 'screen_options' ) );
+		add_submenu_page( 'options-general.php', 'Simple Cache', 'Simple Cache', 'manage_options', 'simple-cache', array( $this, 'settings_page' ) );
 	}
 
 	/**
@@ -117,289 +140,81 @@ class SC_Settings {
 	 *
 	 * @since 1.0
 	 */
-	public function update() {
+	public function update( $request ) {
 
-		if ( ! empty( $_REQUEST['action'] ) && 'sc_update' === $_REQUEST['action'] ) {
+		if ( empty( $request['sc_simple_cache'] ) ) return;
+		$new_settings = $request['sc_simple_cache'];
 
-			if ( ! current_user_can( 'manage_options' ) || empty( $_REQUEST['sc_settings_nonce'] ) || ! wp_verify_nonce( $_REQUEST['sc_settings_nonce'], 'sc_update_settings' ) ) {
-				wp_die( 'You need a higher level of permission.' );
-			}
+		// if ( empty( $_REQUEST['action'] ) || 'sc_update' !== $_REQUEST['action'] ) return;
 
-			$verify_file_access = sc_verify_file_access();
+		// if ( ! current_user_can( 'manage_options' ) || empty( $_REQUEST['sc_settings_nonce'] ) || ! wp_verify_nonce( $_REQUEST['sc_settings_nonce'], 'sc_update_settings' ) ) {
+		// 	wp_die( 'You need a higher level of permission.' );
+		// }
 
-			if ( is_array( $verify_file_access ) ) {
-				if ( SC_IS_NETWORK ) {
-					update_site_option( 'sc_cant_write', array_map( 'sanitize_text_field', $verify_file_access ) );
-				} else {
-					update_option( 'sc_cant_write', array_map( 'sanitize_text_field', $verify_file_access ) );
-				}
+		$verify_file_access = sc_verify_file_access();
 
-				if ( in_array( 'cache', $verify_file_access, true ) ) {
-					wp_safe_redirect( $_REQUEST['wp_http_referer'] );
-					exit;
-				}
-			} else {
-				if ( SC_IS_NETWORK ) {
-					delete_site_option( 'sc_cant_write' );
-				} else {
-					delete_option( 'sc_cant_write' );
-				}
-			}
-
-			$defaults       = SC_Config::factory()->defaults;
-			$current_config = SC_Config::factory()->get();
-
-			foreach ( $defaults as $key => $default ) {
-				$clean_config[ $key ] = $current_config[ $key ];
-
-				if ( isset( $_REQUEST['sc_simple_cache'][ $key ] ) ) {
-					$clean_config[ $key ] = call_user_func( $default['sanitizer'], $_REQUEST['sc_simple_cache'][ $key ] );
-				}
-			}
-
-			// Back up configration in options.
+		if ( is_array( $verify_file_access ) ) {
 			if ( SC_IS_NETWORK ) {
-				update_site_option( 'sc_simple_cache', $clean_config );
+				update_site_option( 'sc_cant_write', array_map( 'sanitize_text_field', $verify_file_access ) );
 			} else {
-				update_option( 'sc_simple_cache', $clean_config );
+				update_option( 'sc_cant_write', array_map( 'sanitize_text_field', $verify_file_access ) );
 			}
 
-			SC_Config::factory()->write( $clean_config );
-
-			SC_Advanced_Cache::factory()->write();
-			SC_Object_Cache::factory()->write();
-
-			if ( $clean_config['enable_page_caching'] ) {
-				SC_Advanced_Cache::factory()->toggle_caching( true );
-			} else {
-				SC_Advanced_Cache::factory()->toggle_caching( false );
-			}
-
-			// Reschedule cron events.
-			SC_Cron::factory()->unschedule_events();
-			SC_Cron::factory()->schedule_events();
-
-			if ( ! empty( $_REQUEST['wp_http_referer'] ) ) {
+			if ( in_array( 'cache', $verify_file_access, true ) ) {
 				wp_safe_redirect( $_REQUEST['wp_http_referer'] );
 				exit;
 			}
+		} else {
+			if ( SC_IS_NETWORK ) {
+				delete_site_option( 'sc_cant_write' );
+			} else {
+				delete_option( 'sc_cant_write' );
+			}
 		}
+
+		$defaults       = SC_Config::factory()->defaults;
+		$current_config = SC_Config::factory()->get();
+
+		foreach ( $defaults as $key => $default ) {
+			$clean_config[ $key ] = $current_config[ $key ];
+
+			if ( isset( $new_settings[ $key ] ) ) {
+				$clean_config[ $key ] = call_user_func( $default['sanitizer'], $new_settings[ $key ] );
+			}
+		}
+
+		// Back up configration in options.
+		if ( SC_IS_NETWORK ) {
+			update_site_option( 'sc_simple_cache', $clean_config );
+		} else {
+			update_option( 'sc_simple_cache', $clean_config );
+		}
+
+		SC_Config::factory()->write( $clean_config );
+
+		SC_Advanced_Cache::factory()->write();
+		SC_Object_Cache::factory()->write();
+
+		if ( $clean_config['enable_page_caching'] ) {
+			SC_Advanced_Cache::factory()->toggle_caching( true );
+		} else {
+			SC_Advanced_Cache::factory()->toggle_caching( false );
+		}
+
+		// Reschedule cron events.
+		SC_Cron::factory()->unschedule_events();
+		SC_Cron::factory()->schedule_events();
+
+		// TODO is this used, and works with SEST?
+		if ( ! empty( $_REQUEST['wp_http_referer'] ) ) {
+			wp_safe_redirect( $_REQUEST['wp_http_referer'] );
+			exit;
+		}
+
+		return "Saved";
 	}
 
-	/**
-	 * Output settings
-	 *
-	 * @since 1.0
-	 */
-	public function screen_options() {
-
-		$config = SC_Config::factory()->get();
-
-		?>
-		<div class="wrap">
-			<h1>Simple Cache Settings</h1>
-
-			<form action="" method="post">
-				<?php wp_nonce_field( 'sc_update_settings', 'sc_settings_nonce' ); ?>
-				<input type="hidden" name="action" value="sc_update">
-				<input type="hidden" name="wp_http_referer" value="<?php echo esc_attr( wp_unslash( $_SERVER['REQUEST_URI'] ) ); ?>'" />
-
-				<div class="advanced-mode-wrapper">
-					<label for="sc_advanced_mode">Enable Advanced Mode</label>
-					<select name="sc_simple_cache[advanced_mode]" id="sc_advanced_mode">
-						<option value="0">No</option>
-						<option <?php selected( $config['advanced_mode'], true ); ?> value="1">Yes</option>
-					</select>
-				</div>
-
-				<table class="form-table sc-simple-mode-table <?php if ( empty( $config['advanced_mode'] ) ) : ?>show<?php endif; ?>">
-					<tbody>
-						<tr>
-							<th scope="row"><label for="sc_enable_page_caching_simple"><span class="setting-highlight">*</span>Enable Caching</label></th>
-							<td>
-								<select <?php if ( ! empty( $config['advanced_mode'] ) ) : ?>disabled<?php endif; ?> name="sc_simple_cache[enable_page_caching]" id="sc_enable_page_caching_simple">
-									<option value="0">No</option>
-									<option <?php selected( $config['enable_page_caching'], true ); ?> value="1">Yes</option>
-								</select>
-
-								<p class="description">Turn this on to get started. This setting turns on caching and is really all you need.</p>
-							</td>
-						</tr>
-						<tr>
-							<th scope="row"><label for="sc_page_cache_length_simple">Expire the cache after</label></th>
-							<td>
-								<input <?php if ( ! empty( $config['advanced_mode'] ) ) : ?>disabled<?php endif; ?> size="5" id="sc_page_cache_length_simple" type="text" value="<?php echo (float) $config['page_cache_length']; ?>" name="sc_simple_cache[page_cache_length]">
-								<select <?php if ( ! empty( $config['advanced_mode'] ) ) : ?>disabled<?php endif; ?> name="sc_simple_cache[page_cache_length_unit]" id="sc_page_cache_length_unit_simple">
-									<option <?php selected( $config['page_cache_length_unit'], 'minutes' ); ?> value="minutes">minutes</option>
-									<option <?php selected( $config['page_cache_length_unit'], 'hours' ); ?> value="hours">hours</option>
-									<option <?php selected( $config['page_cache_length_unit'], 'days' ); ?> value="days">days</option>
-									<option <?php selected( $config['page_cache_length_unit'], 'weeks' ); ?> value="weeks">weeks</option>
-								</select>
-							</td>
-						</tr>
-
-						<?php if ( function_exists( 'gzencode' ) ) : ?>
-							<tr>
-								<th scope="row"><label for="sc_enable_gzip_compression_simple">Enable Compression</label></th>
-								<td>
-									<select <?php if ( ! empty( $config['advanced_mode'] ) ) : ?>disabled<?php endif; ?> name="sc_simple_cache[enable_gzip_compression]" id="sc_enable_gzip_compression_simple">
-										<option value="0">No</option>
-										<option <?php selected( $config['enable_gzip_compression'], true ); ?> value="1">Yes</option>
-									</select>
-
-									<p class="description">When enabled, pages will be compressed. This is a good thing! This should always be enabled unless it causes issues.</p>
-								</td>
-							</tr>
-						<?php endif; ?>
-					</tbody>
-				</table>
-
-				<table class="form-table sc-advanced-mode-table <?php if ( ! empty( $config['advanced_mode'] ) ) : ?>show<?php endif; ?>">
-					<tbody>
-						<tr>
-							<th scope="row" colspan="2">
-								<h2 class="cache-title">Page Cache</h2>
-							</th>
-						</tr>
-
-						<tr>
-							<th scope="row"><label for="sc_enable_page_caching_advanced">Enable Page Caching</label></th>
-							<td>
-								<select <?php if ( empty( $config['advanced_mode'] ) ) : ?>disabled<?php endif; ?> name="sc_simple_cache[enable_page_caching]" id="sc_enable_page_caching_advanced">
-									<option value="0">No</option>
-									<option <?php selected( $config['enable_page_caching'], true ); ?> value="1">Yes</option>
-								</select>
-
-								<p class="description">When enabled, entire front end pages will be cached.</p>
-							</td>
-						</tr>
-
-						<tr>
-							<th scope="row"><label for="sc_cache_exception_urls">Exception URL(s)</label></th>
-							<td>
-								<textarea name="sc_simple_cache[cache_exception_urls]" class="widefat" id="sc_cache_exception_urls"><?php echo esc_html( $config['cache_exception_urls'] ); ?></textarea>
-
-								<p class="description">Allows you to add URL(s) to be exempt from page caching. One URL per line. URL(s) can be full URLs (http://google.com) or absolute paths (/my/url/). You can also use wildcards like so /url/* (matches any url starting with /url/).</p>
-
-								<p>
-									<select name="sc_simple_cache[enable_url_exemption_regex]" id="sc_enable_url_exemption_regex">
-										<option value="0">No</option>
-										<option <?php selected( $config['enable_url_exemption_regex'], true ); ?> value="1">Yes</option>
-									</select>
-									Enable Regex
-								</p>
-							</td>
-						</tr>
-
-						<tr>
-							<th scope="row"><label for="sc_page_cache_length_advanced">Expire page cache after</label></th>
-							<td>
-								<input <?php if ( empty( $config['advanced_mode'] ) ) : ?>disabled<?php endif; ?> size="5" id="sc_page_cache_length_advanced" type="text" value="<?php echo (float) $config['page_cache_length']; ?>" name="sc_simple_cache[page_cache_length]">
-								<select
-								<?php if ( empty( $config['advanced_mode'] ) ) : ?>disabled<?php endif; ?> name="sc_simple_cache[page_cache_length_unit]" id="sc_page_cache_length_unit_advanced">
-									<option <?php selected( $config['page_cache_length_unit'], 'minutes' ); ?> value="minutes">minutes</option>
-									<option <?php selected( $config['page_cache_length_unit'], 'hours' ); ?> value="hours">hours</option>
-									<option <?php selected( $config['page_cache_length_unit'], 'days' ); ?> value="days">days</option>
-									<option <?php selected( $config['page_cache_length_unit'], 'weeks' ); ?> value="weeks">weeks</option>
-								</select>
-							</td>
-						</tr>
-
-						<tr>
-							<th scope="row"><label for="sc_page_cache_enable_rest_api_cache">Cache REST API</label></th>
-							<td>
-								<select <?php if ( empty( $config['advanced_mode'] ) ) : ?>disabled<?php endif; ?> name="sc_simple_cache[page_cache_enable_rest_api_cache]" id="sc_page_cache_enable_rest_api_cache">
-									<option value="0">No</option>
-									<option <?php selected( $config['page_cache_enable_rest_api_cache'], true ); ?> value="1">Yes</option>
-								</select>
-								<p class="description">When enabled, the REST API requests will be cached.</p>
-							</td>
-						</tr>
-
-						<tr>
-							<th scope="row"><label for="sc_page_cache_restore_headers">Restore Headers</label></th>
-							<td>
-								<select <?php if ( empty( $config['advanced_mode'] ) ) : ?>disabled<?php endif; ?> name="sc_simple_cache[page_cache_restore_headers]" id="sc_page_cache_restore_headers">
-									<option value="0">No</option>
-									<option <?php selected( $config['page_cache_restore_headers'], true ); ?> value="1">Yes</option>
-								</select>
-								<p class="description">When enabled, the plugin will save the response headers present when the page is cached and it will send send them again when it serves the cached page. This is recommended when caching the REST API.</p>
-							</td>
-						</tr>
-
-						<tr>
-							<th scope="row" colspan="2">
-								<h2 class="cache-title">Object Cache (Redis or Memcached)</h2>
-							</th>
-						</tr>
-
-						<?php if ( class_exists( 'Memcache' ) || class_exists( 'Memcached' ) || class_exists( 'Redis' ) ) : ?>
-							<tr>
-								<th scope="row"><label for="sc_enable_in_memory_object_caching">Enable In-Memory Object Caching</label></th>
-								<td>
-									<select name="sc_simple_cache[enable_in_memory_object_caching]" id="sc_enable_in_memory_object_caching">
-										<option value="0">No</option>
-										<option <?php selected( $config['enable_in_memory_object_caching'], true ); ?> value="1">Yes</option>
-									</select>
-
-									<p class="description"><?php echo wp_kses_post( __( "When enabled, things like database query results will be stored in memory. Memcached and Redis are suppported. Note that if the proper <a href='http://pecl.php.net/package/memcached'>Memcached</a>, <a href='http://pecl.php.net/package/memcache'>Memcache</a>, or <a href='https://pecl.php.net/package/redis'>Redis</a> PHP extensions aren't loaded, they won't show as options below.", 'simple-cache' ) ); ?></p>
-								</td>
-							</tr>
-							<tr>
-								<th class="in-memory-cache <?php if ( ! empty( $config['enable_in_memory_object_caching'] ) ) : ?>show<?php endif; ?>" scope="row"><label for="sc_in_memory_cache">In Memory Cache</label></th>
-								<td class="in-memory-cache <?php if ( ! empty( $config['enable_in_memory_object_caching'] ) ) : ?>show<?php endif; ?>">
-									<select name="sc_simple_cache[in_memory_cache]" id="sc_in_memory_cache">
-										<?php if ( class_exists( 'Redis' ) ) : ?>
-											<option <?php selected( $config['in_memory_cache'], 'redis' ); ?> value="redis">Redis</option>
-										<?php endif; ?>
-										<?php if ( class_exists( 'Memcached' ) ) : ?>
-											<option <?php selected( $config['in_memory_cache'], 'memcachedd' ); ?> value="memcachedd">Memcached</option>
-										<?php endif; ?>
-										<?php if ( class_exists( 'Memcache' ) ) : ?>
-											<option <?php selected( $config['in_memory_cache'], 'memcached' ); ?> value="memcached">Memcache (Legacy)</option>
-										<?php endif; ?>
-									</select>
-								</td>
-							</tr>
-						<?php else : ?>
-							<tr>
-								<td colspan="2">
-									<?php echo wp_kses_post( __( 'Neither <a href="https://pecl.php.net/package/memcached">Memcached</a>, <a href="https://pecl.php.net/package/memcache">Memcache</a>, nor <a href="https://pecl.php.net/package/redis">Redis</a> PHP extensions are set up on your server.', 'simple-cache' ) ); ?>
-								</td>
-							</tr>
-						<?php endif; ?>
-
-						<tr>
-							<th scope="row" colspan="2">
-								<h2 class="cache-title">Compression</h2>
-							</th>
-						</tr>
-
-						<?php if ( function_exists( 'gzencode' ) ) : ?>
-							<tr>
-								<th scope="row"><label for="sc_enable_gzip_compression_advanced">Enable gzip Compression</label></th>
-								<td>
-									<select <?php if ( empty( $config['advanced_mode'] ) ) : ?>disabled<?php endif; ?> name="sc_simple_cache[enable_gzip_compression]" id="sc_enable_gzip_compression_advanced">
-										<option value="0">No</option>
-										<option <?php selected( $config['enable_gzip_compression'], true ); ?> value="1">Yes</option>
-									</select>
-
-									<p class="description">When enabled pages will be gzip compressed at the PHP level. Note many hosts set up gzip compression in Apache or nginx.</p>
-								</td>
-							</tr>
-						<?php endif; ?>
-					</tbody>
-				</table>
-
-				<p class="submit">
-					<input type="submit" name="submit" id="submit" class="button button-primary" value="Save Changes">
-					<a class="button" style="margin-left: 10px;" href="?page=simple-cache&amp;wp_http_referer=<?php echo esc_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ); ?>&amp;action=sc_purge_cache&amp;sc_cache_nonce=<?php echo esc_attr( wp_create_nonce( 'sc_purge_cache' ) ); ?>">Purge Cache</a>
-				</p>
-			</form>
-		</div>
-		<?php
-	}
-
+	
 	/**
 	 * Return an instance of the current class, create one if it doesn't exist
 	 *
