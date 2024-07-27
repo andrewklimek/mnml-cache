@@ -63,10 +63,11 @@ foreach ( $options as $g => $fields ) {
 		elseif ( $f['type'] === 'section_end' ) { echo "</tbody>"; continue; }
 		else echo "<tr id=tr-{$k} {$hide}><th>";
 		
-		if ( !empty( $f['callback'] ) && function_exists( __NAMESPACE__ .'\\'. $f['callback'] ) ) {
-			echo "<label for='{$g}-{$k}'>{$l}</label><td>";
-			call_user_func( __NAMESPACE__ .'\\'. $f['callback'], $g, $k, $v, $f );
-		} else {
+		if ( !empty( $f['callback'] ) && is_callable( $f['callback'] ) ) {
+			// echo "<label for='{$g}-{$k}'>{$l}</label><td>";
+			$continue = call_user_func( $f['callback'], $g, $k, $v, $f, $l );
+		}
+		if ( empty( $f['callback'] ) || $continue ) {
 			switch ( $f['type'] ) {
 				case 'textarea':
 					echo "<label for='{$g}-{$k}'>{$l}</label><td><textarea id='{$g}-{$k}' name='{$g}[{$k}]' placeholder='{$ph}' rows=8 class={$size}-text>{$v}</textarea>";
