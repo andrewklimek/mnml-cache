@@ -61,6 +61,10 @@ class SC_Config {
 				'default'   => '',
 				'sanitizer' => 'wp_kses_post',
 			),
+			'cache_only_urls'                  => array(
+				'default'   => '',
+				'sanitizer' => 'wp_kses_post',
+			),
 			'enable_url_exemption_regex'       => array(
 				'default'   => false,
 				'sanitizer' => 'boolval',

@@ -50,6 +50,7 @@ class SC_Settings {
 			'advanced_mode' => [],
 			'advanced' => ['type' => 'section', 'show' => 'advanced_mode'],
 			'cache_exception_urls' => [ 'type' => 'code' ],
+			'cache_only_urls' => [ 'type' => 'code' ],
 			'enable_url_exemption_regex' => [],
 			'page_cache_enable_rest_api_cache' => [],
 			'page_cache_restore_headers' => [ 'desc' => 'When enabled, the plugin will save the response headers present when the page is cached and it will send send them again when it serves the cached page. This is recommended when caching the REST API.'],

@@ -7,8 +7,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// if ( $_SERVER['REMOTE_ADDR'] != '76.73.242.188' ) return;// only work for AJK
-
 if ( ! function_exists( 'sc_serve_file_cache' ) ) {
 	return;
 }
@@ -34,7 +32,7 @@ if ( ! empty( $_COOKIE ) ) {
 			$cparts = explode( '|', $value );
 			if ( count( $cparts ) === 4 && is_numeric( $cparts[1] ) && $cparts[1] > time() ) {
 				// still logged in!
-				$GLOBALS['sc_cache_logged_in'] = 0;
+				$GLOBALS['sc_cache_logged_in'] = 0;// TODO I forget why I used 0 for this
 			}
 			break;
 		}
@@ -50,26 +48,6 @@ if ( ! empty( $_COOKIE ) ) {
 	}
 }
 
-$only_cache = [
-	// '/account-stats/',
-	// '/expense-reports/',
-	// '/all-team-credit-card-amounts/',
-	// '/meals-and-travel-all-ambass/',
-];
-// error_log(var_export($_SERVER, true));
-if ( $only_cache ) {
-	if ( in_array( explode('?', $_SERVER['REQUEST_URI'] )[0], $only_cache) ) {
-		if ( isset( $GLOBALS['sc_cache_logged_in'] ) ) $GLOBALS['sc_cache_logged_in'] = 1;
-		sc_serve_file_cache();
-		// error_log('ob_start - only cache');
-		ob_start( 'sc_file_cache' );
-		return;
-	} else {
-		return;
-	}
-}
-
-
 // Don't cache disallowed extensions. Prevents wp-cron.php, xmlrpc.php, etc. @TODO
 if ( strpos( $_SERVER['REQUEST_URI'], '.' ) && strpos( $_SERVER['REQUEST_URI'], 'index.php' ) === false ) {
 	$file_extension = array_reverse( explode('.', explode('?', $_SERVER['REQUEST_URI'] )[0] ) )[0];
@@ -79,8 +57,24 @@ if ( strpos( $_SERVER['REQUEST_URI'], '.' ) && strpos( $_SERVER['REQUEST_URI'], 
 	}
 }
 
-// Deal with optional cache exceptions.
-if ( ! empty( $GLOBALS['sc_config']['advanced_mode'] ) && ! empty( $GLOBALS['sc_config']['cache_exception_urls'] ) ) {
+// exceptions
+if ( ! empty( $GLOBALS['sc_config']['advanced_mode'] ) && ! empty( $GLOBALS['sc_config']['cache_only_urls'] ) ) {
+	$exceptions = preg_split( '<[\r\n]>', $GLOBALS['sc_config']['cache_only_urls'], 0, PREG_SPLIT_NO_EMPTY );
+
+	$regex = ! empty( $GLOBALS['sc_config']['enable_url_exemption_regex'] );
+	$matched = false;
+	foreach ( $exceptions as $exception ) {
+		if ( sc_url_exception_match( $exception, $regex ) ) {
+			$matched = true;
+			break;
+		}
+	}
+	if ( ! $matched ) {
+		// error_log("skipping because not in the 'only cache' setting: " . $_SERVER['REQUEST_URI'] );
+		return;
+	}
+}
+elseif ( ! empty( $GLOBALS['sc_config']['advanced_mode'] ) && ! empty( $GLOBALS['sc_config']['cache_exception_urls'] ) ) {
 	$exceptions = preg_split( '<[\r\n]>', $GLOBALS['sc_config']['cache_exception_urls'], 0, PREG_SPLIT_NO_EMPTY );
 
 	$regex = ! empty( $GLOBALS['sc_config']['enable_url_exemption_regex'] );
