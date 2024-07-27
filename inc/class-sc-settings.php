@@ -208,9 +208,8 @@ class SC_Settings {
 			foreach ( $defaults as $key => $default ) {
 				$clean_config[ $key ] = $current_config[ $key ];
 				
-				if ( isset( $new_settings[ $key ] ) ) {
-					$clean_config[ $key ] = call_user_func( $default['sanitizer'], $new_settings[ $key ] );
-				}
+				if ( ! isset( $new_settings[ $key ] ) ) $new_settings[ $key ] = '';
+				$clean_config[ $key ] = call_user_func( $default['sanitizer'], $new_settings[ $key ] );
 			}
 			
 			// Back up configration in options.
