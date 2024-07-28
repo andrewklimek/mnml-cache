@@ -44,6 +44,7 @@ class SC_Settings {
 		
 		$main = [
 			'enable_page_caching' => [],
+			'private_cache' => [],
 			'enable_gzip_compression' => [ 'callback' => 'SC_Settings::settings_enable_gzip_compression' ],
 			'page_cache_length' => [ 'type' => 'number' ],
 			'page_cache_length_unit' => [ 'options' => ['minutes','hours','days','weeks'], 'type' => 'select' ],

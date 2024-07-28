@@ -32,6 +32,9 @@ if ( ! empty( $_COOKIE ) ) {
 			$cparts = explode( '|', $value );
 			if ( count( $cparts ) === 4 && is_numeric( $cparts[1] ) && $cparts[1] > time() ) {
 				// still logged in!
+				if ( empty( $GLOBALS['sc_config']['private_cache'] ) ) {
+					return;
+				}
 				$GLOBALS['sc_cache_logged_in'] = 0;// TODO I forget why I used 0 for this
 			}
 			break;
