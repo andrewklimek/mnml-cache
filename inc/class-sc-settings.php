@@ -37,10 +37,10 @@ class SC_Settings {
 	}
 	
 	/**
-	* Define Settings and call settings builder
+	* Define Settings
 	* 
 	*/
-	public function settings_page() {
+	public function get_options() {
 		
 		$main = [
 			'enable_page_caching' => [],
@@ -58,8 +58,17 @@ class SC_Settings {
 			'enable_in_memory_object_caching' => [ 'callback' => 'SC_Settings::settings_enable_in_memory_object_caching' ],
 			'in_memory_cache' => [ 'show' => 'enable_in_memory_object_caching', 'options' => [ 'memcached' => 'Memcached', 'redis' => 'Redis' ], 'callback' => 'SC_Settings::settings_in_memory_cache' ],
 		];
-		
-		$options = [ 'sc_simple_cache' => $main ];
+
+		return $main;
+	}
+	
+	/**
+	* Load settings page builder
+	* 
+	*/
+	public function settings_page() {
+
+		$options = [ 'sc_simple_cache' => self::get_options() ];
 		
 		/**
 		*  Build Settings Page using framework in settings_page.php
@@ -173,7 +182,6 @@ class SC_Settings {
 		public function update( $request ) {
 			
 			if ( empty( $request['sc_simple_cache'] ) ) return;
-			$new_settings = $request['sc_simple_cache'];
 			
 			// if ( empty( $_REQUEST['action'] ) || 'sc_update' !== $_REQUEST['action'] ) return;
 			
@@ -202,14 +210,11 @@ class SC_Settings {
 				}
 			}
 			
-			$defaults       = SC_Config::factory()->defaults;
-			$current_config = SC_Config::factory()->get();
+			$new_settings = $request['sc_simple_cache'];
+			$clean_config = [];
 			
-			foreach ( $defaults as $key => $default ) {
-				$clean_config[ $key ] = $current_config[ $key ];
-				
-				if ( ! isset( $new_settings[ $key ] ) ) $new_settings[ $key ] = '';
-				$clean_config[ $key ] = call_user_func( $default['sanitizer'], $new_settings[ $key ] );
+			foreach ( $new_settings as $key => $value ) {
+				$clean_config[ $key ] = isset( $value ) ? htmlspecialchars( $value ) : '';
 			}
 			
 			// Back up configration in options.

@@ -13,90 +13,6 @@ defined( 'ABSPATH' ) || exit;
 class SC_Config {
 
 	/**
-	 * Setup object
-	 *
-	 * @since 1.0.1
-	 * @var   array
-	 */
-	public $defaults = array();
-
-
-	/**
-	 * Set config defaults
-	 *
-	 * @since 1.0
-	 */
-	public function __construct() {
-
-		$this->defaults = array(
-			'enable_page_caching'              => array(
-				'default'   => false,
-				'sanitizer' => 'boolval',
-			),
-			'advanced_mode'                    => array(
-				'default'   => false,
-				'sanitizer' => 'boolval',
-			),
-			'enable_in_memory_object_caching'  => array(
-				'default'   => false,
-				'sanitizer' => 'boolval',
-			),
-			'enable_gzip_compression'          => array(
-				'default'   => false,
-				'sanitizer' => 'boolval',
-			),
-			'in_memory_cache'                  => array(
-				'default'   => 'memcached',
-				'sanitizer' => 'sanitize_text_field',
-			),
-			'page_cache_length'                => array(
-				'default'   => 24,
-				'sanitizer' => 'absint',
-			),
-			'page_cache_length_unit'           => array(
-				'default'   => 'hours',
-				'sanitizer' => array( $this, 'sanitize_length_unit' ),
-			),
-			'cache_exception_urls'             => array(
-				'default'   => '',
-				'sanitizer' => 'wp_kses_post',
-			),
-			'cache_only_urls'                  => array(
-				'default'   => '',
-				'sanitizer' => 'wp_kses_post',
-			),
-			'enable_url_exemption_regex'       => array(
-				'default'   => false,
-				'sanitizer' => 'boolval',
-			),
-			'page_cache_enable_rest_api_cache' => array(
-				'default'   => false,
-				'sanitizer' => 'boolval',
-			),
-			'page_cache_restore_headers'       => array(
-				'default'   => false,
-				'sanitizer' => 'boolval',
-			),
-		);
-	}
-
-	/**
-	 * Make sure the length unit has an expected value
-	 *
-	 * @param  string $value Value to sanitize.
-	 * @return string
-	 */
-	public function sanitize_length_unit( $value ) {
-		$accepted_values = array( 'minutes', 'hours', 'days', 'weeks' );
-
-		if ( in_array( $value, $accepted_values, true ) ) {
-			return $value;
-		}
-
-		return 'minutes';
-	}
-
-	/**
 	 * Return defaults
 	 *
 	 * @since  1.0
@@ -104,12 +20,20 @@ class SC_Config {
 	 */
 	public function get_defaults() {
 
-		$defaults = array();
+		$options = SC_Settings::factory()->get_options();
 
-		foreach ( $this->defaults as $key => $default ) {
-			$defaults[ $key ] = $default['default'];
+		$defaults = [];
+
+		foreach ( $options as $key => $value ) {
+			if ( isset( $value['default'] ) ) {
+				$defaults[ $key ] = $value['default'];
+			} elseif ( isset( $value['options'] ) ) {
+				$defaults[ $key ] = current( $value['options'] );
+			} else {
+				$defaults[ $key ] = '';
+			}
 		}
-
+error_log(var_export($defaults,1));
 		return $defaults;
 	}
 
@@ -142,7 +66,7 @@ class SC_Config {
 		}
 
 		// phpcs:disable
-		return '<?php ' . "\r\n" . "defined( 'ABSPATH' ) || exit;" . "\r\n" . 'return ' . var_export( wp_parse_args( $config, $this->get_defaults() ), true ) . '; ' . "\r\n";
+		return "<?php\r\ndefined( 'ABSPATH' ) || exit;\r\nreturn " . var_export( $config, true ) . ";";
 		// phpcs:enable
 	}
 
@@ -179,7 +103,7 @@ class SC_Config {
 	}
 
 	/**
-	 * Get config from file or cache
+	 * Get config from cache
 	 *
 	 * @since  1.0
 	 * @return array
