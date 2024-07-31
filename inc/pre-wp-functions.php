@@ -26,7 +26,11 @@ function sc_file_cache( $buffer, $flags ) {
 
 	// error_log( "buffer connection_status: " . connection_status());
 
-	$cache_dir = sc_get_cache_dir();
+	// safety to really not cache logged in pages incase the pre-wp check is somehow faulty
+	if ( empty( $GLOBALS['sc_config']['sc_cache_logged_in'] ) && is_user_logged_in() ) {
+		error_log("!!! WOULD HAVE CACHED A LOGGED IN USER !!!");
+		return $buffer;
+	}
 
 	// Don't cache small requests unless it's a REST API request.
 	if ( mb_strlen( $buffer ) < 255 && ( ! defined( 'REST_REQUEST' ) || ! mb_strlen( $buffer ) > 0 ) ) {
@@ -42,6 +46,8 @@ function sc_file_cache( $buffer, $flags ) {
 	if ( defined( 'REST_REQUEST' ) && REST_REQUEST && ( empty( $GLOBALS['sc_config']['page_cache_enable_rest_api_cache'] ) || ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) ) {
 		return $buffer;
 	}
+
+	$cache_dir = sc_get_cache_dir();
 
 	// Make sure we can read/write files to cache dir parent
 	if ( ! file_exists( dirname( $cache_dir ) ) ) {
