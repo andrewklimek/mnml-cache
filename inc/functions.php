@@ -10,7 +10,7 @@
 
 add_action( 'wp_footer', 'sc_flag_page_done', 99999999 );
 function sc_flag_page_done() {
-	define( 'SC_FLAG_PAGE_DONE', TRUE );
+	defined( 'SC_FLAG_PAGE_DONE' ) || define( 'SC_FLAG_PAGE_DONE', TRUE );
 	// error_log('flag page finished loading ' . $_SERVER['REQUEST_URI']);
 }
 

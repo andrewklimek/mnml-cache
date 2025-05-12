@@ -33,7 +33,7 @@ class SC_Config {
 				$defaults[ $key ] = '';
 			}
 		}
-error_log(var_export($defaults,1));
+
 		return $defaults;
 	}
 
