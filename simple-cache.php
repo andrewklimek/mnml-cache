@@ -22,18 +22,16 @@ defined( 'ABSPATH' ) || exit;
 // }
 defined( 'SC_IS_NETWORK' ) || define( 'SC_IS_NETWORK', false );
 
-require_once __DIR__ . '/inc/pre-wp-functions.php';
-require_once __DIR__ . '/inc/functions.php';
-require_once __DIR__ . '/inc/class-sc-notices.php';
-require_once __DIR__ . '/inc/class-sc-settings.php';
-require_once __DIR__ . '/inc/class-sc-config.php';
-require_once __DIR__ . '/inc/class-sc-advanced-cache.php';
-require_once __DIR__ . '/inc/class-sc-object-cache.php';
-require_once __DIR__ . '/inc/class-sc-cron.php';
+require_once __DIR__ . '/pre-wp-functions.php';
+require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/class-sc-notices.php';
+require_once __DIR__ . '/class-sc-settings.php';
+require_once __DIR__ . '/class-sc-config.php';
+require_once __DIR__ . '/class-sc-advanced-cache.php';
+require_once __DIR__ . '/class-sc-cron.php';
 
 SC_Settings::factory();
 SC_Advanced_Cache::factory();
-SC_Object_Cache::factory();
 SC_Cron::factory();
 SC_Notices::factory();
 
@@ -66,7 +64,6 @@ function sc_deactivate( $network ) {
 	sc_cache_flush( $network );
 	SC_Advanced_Cache::factory()->clean_up();
 	SC_Advanced_Cache::factory()->toggle_caching( false );
-	SC_Object_Cache::factory()->clean_up();
 	SC_Config::factory()->clean_up();
 }
 add_action( 'deactivate_' . plugin_basename( __FILE__ ), 'sc_deactivate' );
@@ -82,7 +79,6 @@ add_action( 'deactivate_' . plugin_basename( __FILE__ ), 'sc_deactivate' );
 function sc_uninstall() {
 	// SC_Advanced_Cache::factory()->clean_up();
 	// SC_Advanced_Cache::factory()->toggle_caching( false );
-	// SC_Object_Cache::factory()->clean_up();
 	SC_Config::factory()->clean_up();
 	sc_cache_flush( true );// $network attribute?
 }
