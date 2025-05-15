@@ -18,13 +18,16 @@ require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/class-sc-notices.php';
 require_once __DIR__ . '/class-sc-settings.php';
 require_once __DIR__ . '/class-sc-config.php';
-require_once __DIR__ . '/class-sc-advanced-cache.php';
-require_once __DIR__ . '/class-sc-cron.php';
-
-SC_Settings::factory();
-SC_Advanced_Cache::factory();
-SC_Cron::factory();
 SC_Notices::factory();
+SC_Settings::factory();
+$config = SC_Config::factory()->get();
+
+if ( ! empty( $config['enable_page_caching'] ) ) {
+	require_once __DIR__ . '/class-sc-advanced-cache.php';
+	require_once __DIR__ . '/class-sc-cron.php';	
+	SC_Advanced_Cache::factory();
+	SC_Cron::factory();
+}
 
 /**
  * Add settings link to plugin actions

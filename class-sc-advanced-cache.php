@@ -27,17 +27,14 @@ class SC_Advanced_Cache {
 	 * @param  int $comment_id Comment ID.
 	 */
 	public function purge_post_on_comment_status_change( $comment_id ) {
-		$config = SC_Config::factory()->get();
 
-		if ( ! empty( $config['enable_page_caching'] ) ) {
-			$comment = get_comment( $comment_id );
-			$post_id = $comment->comment_post_ID;
+		$comment = get_comment( $comment_id );
+		$post_id = $comment->comment_post_ID;
 
-			$path = sc_get_cache_path() . '/' . preg_replace( '#https?://#i', '', get_permalink( $post_id ) );
+		$path = sc_get_cache_path() . '/' . preg_replace( '#https?://#i', '', get_permalink( $post_id ) );
 
-			@unlink( untrailingslashit( $path ) . '/index.html' );
-			@unlink( untrailingslashit( $path ) . '/index.gzip.html' );
-		}
+		@unlink( untrailingslashit( $path ) . '/index.html' );
+		@unlink( untrailingslashit( $path ) . '/index.gzip.html' );
 	}
 
 	/**
@@ -52,16 +49,12 @@ class SC_Advanced_Cache {
 			return;
 		}
 
-		$config = SC_Config::factory()->get();
+		$post_id = $commentdata['comment_post_ID'];
 
-		if ( ! empty( $config['enable_page_caching'] ) ) {
-			$post_id = $commentdata['comment_post_ID'];
+		$path = sc_get_cache_path() . '/' . preg_replace( '#https?://#i', '', get_permalink( $post_id ) );
 
-			$path = sc_get_cache_path() . '/' . preg_replace( '#https?://#i', '', get_permalink( $post_id ) );
-
-			@unlink( untrailingslashit( $path ) . '/index.html' );
-			@unlink( untrailingslashit( $path ) . '/index.gzip.html' );
-		}
+		@unlink( untrailingslashit( $path ) . '/index.html' );
+		@unlink( untrailingslashit( $path ) . '/index.gzip.html' );
 	}
 
 	/**
@@ -70,6 +63,7 @@ class SC_Advanced_Cache {
 	 * @param  int $post_id Post id.
 	 */
 	public function purge_post_on_update( $post_id ) {
+		error_log("this ran");
 		$post = get_post( $post_id );
 
 		// Do not purge the cache if it's an autosave or it is updating a revision.
@@ -85,11 +79,7 @@ class SC_Advanced_Cache {
 			return;
 		}
 
-		$config = SC_Config::factory()->get();
-
-		if ( ! empty( $config['enable_page_caching'] ) ) {
-			sc_cache_flush();
-		}
+		sc_cache_flush();
 	}
 
 	/**
@@ -121,13 +111,9 @@ class SC_Advanced_Cache {
 
 		$file = untrailingslashit( WP_CONTENT_DIR ) . '/advanced-cache.php';
 
-		$config = SC_Config::factory()->get();
-
 		$file_string = '';
 
-		if ( ! empty( $config['enable_page_caching'] ) ) {
-			$file_string = $this->get_file_code();
-		}
+		$file_string = $this->get_file_code();
 
 		if ( ! file_put_contents( $file, $file_string ) ) {
 			return false;
