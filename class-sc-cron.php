@@ -74,12 +74,6 @@ class SC_Cron {
 
 		$timestamp = wp_next_scheduled( 'sc_purge_cache' );
 
-		// Do nothing if we are using the object cache.
-		if ( ! empty( $config['advanced_mode'] ) && ! empty( $config['enable_in_memory_object_caching'] ) ) {
-			wp_unschedule_event( $timestamp, 'sc_purge_cache' );
-			return;
-		}
-
 		// Expire cache never.
 		if ( isset( $config['page_cache_length'] ) && 0 === $config['page_cache_length'] ) {
 			wp_unschedule_event( $timestamp, 'sc_purge_cache' );
@@ -96,17 +90,6 @@ class SC_Cron {
 	 *
 	 */
 	public function purge_cache() {
-		$config = SC_Config::factory()->get();
-
-		// Do nothing, caching is turned off.
-		if ( empty( $config['enable_page_caching'] ) ) {
-			return;
-		}
-
-		// Do nothing if we are using the object cache.
-		if ( ! empty( $config['advanced_mode'] ) && ! empty( $config['enable_in_memory_object_caching'] ) ) {
-			return;
-		}
 
 		sc_cache_flush();
 	}
