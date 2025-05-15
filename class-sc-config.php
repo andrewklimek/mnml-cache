@@ -2,7 +2,6 @@
 /**
  * Handle plugin config
  *
- * @package  simple-cache
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -15,7 +14,6 @@ class SC_Config {
 	/**
 	 * Return defaults
 	 *
-	 * @since  1.0
 	 * @return array
 	 */
 	public function get_defaults() {
@@ -40,7 +38,6 @@ class SC_Config {
 	/**
 	 * Get config file name
 	 *
-	 * @since  1.7
 	 * @return string
 	 */
 	private function get_config_file_name() {
@@ -53,7 +50,6 @@ class SC_Config {
 	/**
 	 * Get contents of config file
 	 *
-	 * @since  1.7
 	 * @param  array $config Config array to use
 	 * @return string
 	 */
@@ -70,7 +66,6 @@ class SC_Config {
 	/**
 	 * Write config to file
 	 *
-	 * @since  1.0
 	 * @param  array $config Configuration array.
 	 * @return bool
 	 */
@@ -96,7 +91,6 @@ class SC_Config {
 	/**
 	 * Get config from cache
 	 *
-	 * @since  1.0
 	 * @return array
 	 */
 	public function get() {
@@ -109,7 +103,6 @@ class SC_Config {
 	/**
 	 * Delete files and option for clean up
 	 *
-	 * @since  1.2.2
 	 * @return bool
 	 */
 	public function clean_up() {
@@ -128,7 +121,6 @@ class SC_Config {
 	/**
 	 * Return an instance of the current class, create one if it doesn't exist
 	 *
-	 * @since  1.0
 	 * @return SC_Config
 	 */
 	public static function factory() {

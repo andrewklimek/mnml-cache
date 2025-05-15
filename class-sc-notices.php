@@ -2,7 +2,6 @@
 /**
  * Handle all admin notices
  *
- * @package  simple-cache
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -15,7 +14,6 @@ class SC_Notices {
 	/**
 	 * Setup actions and filters
 	 *
-	 * @since 1.0
 	 */
 	private function setup() {
 		add_action( 'admin_notices', array( $this, 'error_notice' ) );
@@ -25,7 +23,6 @@ class SC_Notices {
 	/**
 	 * Output turn on notice
 	 *
-	 * @since 1.0
 	 */
 	public function setup_notice() {
 
@@ -58,7 +55,6 @@ class SC_Notices {
 	/**
 	 * Output error notices
 	 *
-	 * @since  1.7
 	 */
 	public function error_notice() {
 
@@ -119,7 +115,6 @@ class SC_Notices {
 	/**
 	 * Return an instance of the current class, create one if it doesn't exist
 	 *
-	 * @since  1.0
 	 * @return object
 	 */
 	public static function factory() {

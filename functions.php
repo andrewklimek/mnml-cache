@@ -2,7 +2,6 @@
 /**
  * Utility functions for plugin
  *
- * @package  simple-cache
  */
 
 
@@ -32,7 +31,6 @@ function sc_load_logged_in_cache(){
 /**
  * Clear the cache
  *
- * @since  1.4
  */
 function sc_cache_flush() {
 	$paths = array();
@@ -59,7 +57,6 @@ function sc_cache_flush() {
 /**
  * Verify we can write to the file system
  *
- * @since  1.7
  * @return array|boolean
  */
 function sc_verify_file_access() {
@@ -126,7 +123,6 @@ function sc_verify_file_access() {
  * Remove directory and all it's contents
  *
  * @param  string $dir Directory
- * @since  1.7
  */
 function sc_rrmdir( $dir ) {
 	if ( is_dir( $dir ) ) {

@@ -1,15 +1,14 @@
 <?php
 /**
- * Plugin Name: Simple Cache - AJK Mod
- * Plugin URI: https://taylorlovett.com
- * Description: A simple caching plugin that just works.
- * Author: Taylor Lovett
- * Version: 2.0.0
+ * Plugin Name: Mnml Cache
+ * Plugin URI: 
+ * Description: 
+ * Author: 
+ * Version: 1.0.0
  * Text Domain: simple-cache
  * Domain Path: /languages
- * Author URI: https://taylorlovett.com
+ * Author URI: 
  *
- * @package  simple-cache
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -32,7 +31,6 @@ SC_Notices::factory();
  *
  * @param  array  $plugin_actions Each action is HTML.
  * @param  string $plugin_file Path to plugin file.
- * @since  1.0
  * @return array
  */
 function sc_filter_plugin_action_links( $links, $file ) {
@@ -48,8 +46,6 @@ add_filter( 'plugin_action_links', 'sc_filter_plugin_action_links', 10, 2 );
 
 /**
  * Clean up necessary files
- *
- * @since 1.0
  */
 function sc_deactivate() {
 	sc_cache_flush();
@@ -77,8 +73,6 @@ function sc_uninstall() {
 
 /**
  * Create config file
- *
- * @since 1.0
  */
 function sc_activate() {
 	SC_Config::factory()->write( array() );

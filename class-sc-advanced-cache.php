@@ -1,8 +1,6 @@
 <?php
 /**
  * Page caching functionality
- *
- * @package  simple-cache
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -14,8 +12,6 @@ class SC_Advanced_Cache {
 
 	/**
 	 * Setup hooks/filters
-	 *
-	 * @since 1.0
 	 */
 	public function setup() {
 		add_action( 'pre_post_update', array( $this, 'purge_post_on_update' ), 10, 1 );
@@ -29,7 +25,6 @@ class SC_Advanced_Cache {
 	 * When user posts a comment, set a cookie so we don't show them page cache
 	 *
 	 * @param  WP_Comment $comment Comment to check.
-	 * @since  1.3
 	 */
 	public function set_comment_cookie_exceptions( $comment ) {
 		$config = SC_Config::factory()->get();
@@ -45,7 +40,6 @@ class SC_Advanced_Cache {
 	 * Every time a comments status changes, purge it's parent posts cache
 	 *
 	 * @param  int $comment_id Comment ID.
-	 * @since  1.3
 	 */
 	public function purge_post_on_comment_status_change( $comment_id ) {
 		$config = SC_Config::factory()->get();
@@ -67,7 +61,6 @@ class SC_Advanced_Cache {
 	 * @param  int   $comment_id Comment ID.
 	 * @param  int   $approved Comment approved status.
 	 * @param  array $commentdata Comment data array.
-	 * @since  1.3
 	 */
 	public function purge_post_on_comment( $comment_id, $approved, $commentdata ) {
 		if ( empty( $approved ) ) {
@@ -90,7 +83,6 @@ class SC_Advanced_Cache {
 	 * Automatically purge all file based page cache on post changes
 	 *
 	 * @param  int $post_id Post id.
-	 * @since  1.3
 	 */
 	public function purge_post_on_update( $post_id ) {
 		$post = get_post( $post_id );
@@ -118,7 +110,6 @@ class SC_Advanced_Cache {
 	/**
 	 * Delete file for clean up
 	 *
-	 * @since  1.0
 	 * @return bool
 	 */
 	public function clean_up() {
@@ -139,7 +130,6 @@ class SC_Advanced_Cache {
 	/**
 	 * Write advanced-cache.php
 	 *
-	 * @since  1.0
 	 * @return bool
 	 */
 	public function write() {
@@ -164,7 +154,6 @@ class SC_Advanced_Cache {
 	/**
 	 * Get contents of advanced cache file
 	 *
-	 * @since  1.7
 	 * @return string
 	 */
 	public function get_file_code() {
@@ -186,7 +175,6 @@ class SC_Advanced_Cache {
 	 * Toggle WP_CACHE on or off in wp-config.php
 	 *
 	 * @param  boolean $status Status of cache.
-	 * @since  1.0
 	 * @return boolean
 	 */
 	public function toggle_caching( $status ) {
@@ -259,7 +247,6 @@ class SC_Advanced_Cache {
 	/**
 	 * Return an instance of the current class, create one if it doesn't exist
 	 *
-	 * @since  1.0
 	 * @return object
 	 */
 	public static function factory() {

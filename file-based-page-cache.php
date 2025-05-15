@@ -2,7 +2,6 @@
 /**
  * File based page cache drop in
  *
- * @package  simple-cache
  */
 
 defined( 'ABSPATH' ) || exit;

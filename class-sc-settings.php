@@ -1,8 +1,6 @@
 <?php
 /**
 * Settings class
-*
-* @package  simple-cache
 */
 
 defined( 'ABSPATH' ) || exit;
@@ -14,8 +12,6 @@ class SC_Settings {
 	
 	/**
 	* Setup the plugin
-	*
-	* @since 1.0
 	*/
 	public function setup() {
 		
@@ -33,7 +29,6 @@ class SC_Settings {
 	
 	/**
 	* Define Settings
-	* 
 	*/
 	public function get_options() {
 		
@@ -58,7 +53,6 @@ class SC_Settings {
 	
 	/**
 	* Load settings page builder
-	* 
 	*/
 	public function settings_page() {
 
@@ -84,8 +78,6 @@ class SC_Settings {
 	
 	/**
 	* Add purge cache button to admin bar
-	*
-	* @since 1,3
 	*/
 	public function admin_bar_menu() {
 		global $wp_admin_bar;
@@ -106,8 +98,6 @@ class SC_Settings {
 		
 		/**
 		* Add options page
-		*
-		* @since 1.0
 		*/
 		public function action_admin_menu() {
 			add_submenu_page( 'options-general.php', 'Simple Cache', 'Simple Cache', 'manage_options', 'simple-cache', array( $this, 'settings_page' ) );
@@ -115,8 +105,6 @@ class SC_Settings {
 		
 		/**
 		* Purge cache manually
-		*
-		* @since 1.0
 		*/
 		public function purge_cache() {
 			
@@ -136,8 +124,6 @@ class SC_Settings {
 		
 		/**
 		* Handle setting changes
-		*
-		* @since 1.0
 		*/
 		public function update( $request ) {
 			
@@ -199,7 +185,6 @@ class SC_Settings {
 		/**
 		* Return an instance of the current class, create one if it doesn't exist
 		*
-		* @since  1.0
 		* @return object
 		*/
 		public static function factory() {

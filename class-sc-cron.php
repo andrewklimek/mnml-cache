@@ -2,7 +2,6 @@
 /**
  * Cron functionality
  *
- * @package  simple-cache
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -15,7 +14,6 @@ class SC_Cron {
 	/**
 	 * Setup actions and filters
 	 *
-	 * @since 1.0
 	 */
 	private function setup() {
 
@@ -28,7 +26,6 @@ class SC_Cron {
 	 * Add custom cron schedule
 	 *
 	 * @param  array $schedules Current cron schedules.
-	 * @since  1.0
 	 * @return array
 	 */
 	public function filter_cron_schedules( $schedules ) {
@@ -60,7 +57,6 @@ class SC_Cron {
 	/**
 	 * Unschedule events
 	 *
-	 * @since  1.4.1
 	 */
 	public function unschedule_events() {
 		$timestamp = wp_next_scheduled( 'sc_purge_cache' );
@@ -71,7 +67,6 @@ class SC_Cron {
 	/**
 	 * Setup cron jobs
 	 *
-	 * @since 1.0
 	 */
 	public function schedule_events() {
 
@@ -99,7 +94,6 @@ class SC_Cron {
 	/**
 	 * Initiate a cache purge
 	 *
-	 * @since 1.0
 	 */
 	public function purge_cache() {
 		$config = SC_Config::factory()->get();
@@ -120,7 +114,6 @@ class SC_Cron {
 	/**
 	 * Return an instance of the current class, create one if it doesn't exist
 	 *
-	 * @since  1.0
 	 * @return object
 	 */
 	public static function factory() {

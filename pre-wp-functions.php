@@ -2,8 +2,6 @@
 /**
  * Holds functions that can be loaded in advanced-cache.php
  *
- * @since  1.7
- * @package  simple-cache
  */
 
 /**
@@ -11,7 +9,6 @@
  *
  * @param  string $buffer Page HTML.
  * @param  int    $flags OB flags to be passed through.
- * @since  1.7
  * @return string
  */
 function sc_file_cache( $buffer, $flags ) {
@@ -145,7 +142,6 @@ function sc_file_cache( $buffer, $flags ) {
 /**
  * Get URL path for caching
  *
- * @since  1.0
  * @return string
  */
 function sc_get_url_path() {
@@ -167,7 +163,6 @@ function sc_get_cache_path() {
 /**
  * Optionally serve cache and exit
  *
- * @since 1.0
  */
 function sc_serve_file_cache($do_logged_in=false) {
 
@@ -257,7 +252,6 @@ function sc_serve_file_cache($do_logged_in=false) {
 /**
  * Get cache directory
  *
- * @since  1.7
  * @return string
  */
 function sc_get_cache_dir() {
@@ -267,7 +261,6 @@ function sc_get_cache_dir() {
 /**
  * Get config directory
  *
- * @since 1.7
  * @return string
  */
 function sc_get_config_dir() {
@@ -278,7 +271,6 @@ function sc_get_config_dir() {
 /**
  * Gets name of the config file.
  *
- * @since  1.7
  * @return string
  */
 function sc_get_config_file_name() {
@@ -288,7 +280,6 @@ function sc_get_config_file_name() {
 /**
  * Load config. Only intended to be used pre-wp.
  *
- * @since  1.7
  * @return bool|array
  */
 function sc_load_config() {
@@ -304,7 +295,6 @@ function sc_load_config() {
  *
  * @param  string $rule Exceptions to check URL against.
  * @param  bool   $regex Whether to check with regex or not.
- * @since  1.6
  * @return boolean
  */
 function sc_url_exception_match( $rule, $regex = false ) {
