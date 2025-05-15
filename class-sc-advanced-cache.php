@@ -18,26 +18,11 @@ class SC_Advanced_Cache {
 		add_action( 'save_post', array( $this, 'purge_post_on_update' ), 10, 1 );
 		add_action( 'wp_trash_post', array( $this, 'purge_post_on_update' ), 10, 1 );
 		add_action( 'wp_set_comment_status', array( $this, 'purge_post_on_comment_status_change' ), 10 );
-		add_action( 'set_comment_cookies', array( $this, 'set_comment_cookie_exceptions' ), 10 );
-	}
-
-	/**
-	 * When user posts a comment, set a cookie so we don't show them page cache
-	 *
-	 * @param  WP_Comment $comment Comment to check.
-	 */
-	public function set_comment_cookie_exceptions( $comment ) {
-		$config = SC_Config::factory()->get();
-
-		if ( ! empty( $config['enable_page_caching'] ) ) {
-			$post_id = $comment->comment_post_ID;
-
-			setcookie( 'sc_commented_posts[' . $post_id . ']', wp_parse_url( get_permalink( $post_id ), PHP_URL_PATH ), ( time() + HOUR_IN_SECONDS * 24 * 30 ) );
-		}
 	}
 
 	/**
 	 * Every time a comments status changes, purge it's parent posts cache
+	 * TODO doesn't this run when the approved code below runs too?  or is it not considered a change if it goes straight to approved?
 	 *
 	 * @param  int $comment_id Comment ID.
 	 */
