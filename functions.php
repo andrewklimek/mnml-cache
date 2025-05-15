@@ -2,6 +2,7 @@
 /**
  * Utility functions for plugin
  *
+ * @package  simple-cache
  */
 
 
@@ -30,24 +31,10 @@ function sc_load_logged_in_cache(){
 
 /**
  * Clear the cache
- *
  */
 function sc_cache_flush() {
-	$paths = array();
 
-	$url_parts = wp_parse_url( home_url() );
-
-	$path = sc_get_cache_dir() . '/' . untrailingslashit( $url_parts['host'] ) . '/';// TODO host can be undefined...
-
-	if ( ! empty( $url_parts['path'] ) && '/' !== $url_parts['path'] ) {
-		$path .= trim( $url_parts['path'], '/' );
-	}
-
-	$paths[] = $path;
-
-	foreach ( $paths as $rm_path ) {
-		sc_rrmdir( $rm_path );
-	}
+	sc_rrmdir( sc_get_cache_dir() );
 
 	if ( function_exists( 'wp_cache_flush' ) ) {
 		wp_cache_flush();
@@ -57,6 +44,7 @@ function sc_cache_flush() {
 /**
  * Verify we can write to the file system
  *
+ * @since  1.7
  * @return array|boolean
  */
 function sc_verify_file_access() {
@@ -123,21 +111,41 @@ function sc_verify_file_access() {
  * Remove directory and all it's contents
  *
  * @param  string $dir Directory
+ * @since  1.7
  */
-function sc_rrmdir( $dir ) {
-	if ( is_dir( $dir ) ) {
-		$objects = scandir( $dir );
+function sc_rrmdir($dir, $retain_root = true) {
 
-		foreach ( $objects as $object ) {
-			if ( '.' !== $object && '..' !== $object ) {
-				if ( is_dir( $dir . '/' . $object ) ) {
-					sc_rrmdir( $dir . '/' . $object );
-				} else {
-					unlink( $dir . '/' . $object );
-				}
+	if (!is_string($dir) || empty($dir) || !is_dir($dir) || !is_readable($dir)) {
+		return false;
+	}
+
+	$handle = opendir($dir);
+	if ($handle === false) {
+		return false;
+	}
+
+	while (false !== ($object = readdir($handle))) {
+		if ($object === '.' || $object === '..') continue;
+		$path = $dir . DIRECTORY_SEPARATOR . $object;
+		if (is_dir($path)) {
+			// Recursively clear subdirectory
+			if (!sc_rrmdir($path, false)) {
+				closedir($handle);
+				return false;
+			}
+		} else {
+			if (!@unlink($path)) {
+				closedir($handle);
+				return false;
 			}
 		}
-
-		rmdir( $dir );
 	}
+
+	closedir($handle);
+
+	if ( ! $retain_root ) {
+		return @rmdir($dir);
+	}
+
+	return true;
 }

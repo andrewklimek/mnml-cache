@@ -36,18 +36,6 @@ class SC_Config {
 	}
 
 	/**
-	 * Get config file name
-	 *
-	 * @return string
-	 */
-	private function get_config_file_name() {
-
-		$home_url_parts = wp_parse_url( home_url() );
-
-		return 'config-' . $home_url_parts['host'] . '.php';
-	}
-
-	/**
 	 * Get contents of config file
 	 *
 	 * @param  array $config Config array to use
@@ -73,15 +61,13 @@ class SC_Config {
 
 		$config_dir = sc_get_config_dir();
 
-		$file_name = $this->get_config_file_name();
-
 		$config = wp_parse_args( $config, $this->get_defaults() );
 
 		@mkdir( $config_dir );
 
 		$config_file_string = $this->get_file_code( $config );
 
-		if ( ! file_put_contents( $config_dir . '/' . $file_name, $config_file_string ) ) {
+		if ( ! file_put_contents( $config_dir . '/simple-cache-config.php', $config_file_string ) ) {
 			return false;
 		}
 
@@ -111,7 +97,7 @@ class SC_Config {
 
 		delete_option( 'sc_simple_cache' );
 
-		if ( ! @unlink( $config_dir . '/' . $this->get_config_file_name() ) ) {
+		if ( ! @unlink( $config_dir . '/simple-cache-config.php' ) ) {
 			return false;
 		}
 

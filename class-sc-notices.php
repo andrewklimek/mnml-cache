@@ -89,7 +89,7 @@ class SC_Notices {
 
 				<?php if ( in_array( 'config', $cant_write, true ) ) : ?>
 					<li>
-						<?php echo wp_kses_post( sprintf( __( 'Simple Cache could not create the necessary config file. Either click "Attempt Fix" or add the following code to <code>%s</code>:', 'simple-cache' ), esc_html( sc_get_config_dir() . '/' . sc_get_config_file_name() ) ) ); ?>
+						<?php echo wp_kses_post( sprintf( __( 'Simple Cache could not create the necessary config file. Either click "Attempt Fix" or add the following code to <code>%s</code>:', 'simple-cache' ), esc_html( sc_get_config_dir() . '/simple-cache-config.php' ) ) ); ?>
 
 						<pre><?php echo esc_html( SC_Config::factory()->get_file_code() ); ?></pre>
 					</li>
@@ -97,7 +97,7 @@ class SC_Notices {
 
 				<?php if ( in_array( 'wp-content', $cant_write, true ) || $advanced_cache_broken ) : ?>
 					<li>
-						<?php echo wp_kses_post( sprintf( __( 'Simple Cache could not write advanced-cache.php to your wp-content directory or the file has been tampered with. Either click "Attempt Fix" or add the following code manually to <code>wp-content/advanced-cache.php</code>:', 'simple-cache' ), esc_html( sc_get_config_dir() . '/' . sc_get_config_file_name() ) ) ); ?>
+						<?php echo wp_kses_post( sprintf( __( 'Simple Cache could not write advanced-cache.php to your wp-content directory or the file has been tampered with. Either click "Attempt Fix" or add the following code manually to <code>wp-content/advanced-cache.php</code>:', 'simple-cache' ), esc_html( sc_get_config_dir() . '/simple-cache-config.php' ) ) ); ?>
 
 						<pre><?php echo esc_html( SC_Advanced_Cache::factory()->get_file_code() ); ?></pre>
 					</li>

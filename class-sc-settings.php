@@ -160,15 +160,18 @@ class SC_Settings {
 			
 			SC_Config::factory()->write( $clean_config );
 			
-			SC_Advanced_Cache::factory()->write();
+			
+			require_once __DIR__ . '/class-sc-advanced-cache.php';
 			
 			if ( $clean_config['enable_page_caching'] ) {
+				SC_Advanced_Cache::factory()->write();
 				SC_Advanced_Cache::factory()->toggle_caching( true );
 			} else {
 				SC_Advanced_Cache::factory()->toggle_caching( false );
 			}
 			
 			// Reschedule cron events.
+			require_once __DIR__ . '/class-sc-cron.php';
 			SC_Cron::factory()->unschedule_events();
 			SC_Cron::factory()->schedule_events();
 			

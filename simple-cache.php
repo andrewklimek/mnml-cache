@@ -24,7 +24,7 @@ $config = SC_Config::factory()->get();
 
 if ( ! empty( $config['enable_page_caching'] ) ) {
 	require_once __DIR__ . '/class-sc-advanced-cache.php';
-	require_once __DIR__ . '/class-sc-cron.php';	
+	require_once __DIR__ . '/class-sc-cron.php';
 	SC_Advanced_Cache::factory();
 	SC_Cron::factory();
 }

@@ -146,9 +146,7 @@ function sc_file_cache( $buffer, $flags ) {
  */
 function sc_get_url_path() {
 
-	$host = ( isset( $_SERVER['HTTP_HOST'] ) ) ? $_SERVER['HTTP_HOST'] : '';
-
-	return rtrim( $host, '/' ) . $_SERVER['REQUEST_URI'];
+	return $_SERVER['REQUEST_URI'];
 }
 
 /**
@@ -264,17 +262,7 @@ function sc_get_cache_dir() {
  * @return string
  */
 function sc_get_config_dir() {
-	return ( defined( 'SC_CONFIG_DIR' ) ) ? rtrim( SC_CONFIG_DIR, '/' ) : rtrim( WP_CONTENT_DIR, '/' ) . '/sc-config';
-	// 	return ( defined( 'SC_CONFIG_DIR' ) ? SC_CONFIG_DIR : WP_CONTENT_DIR );
-}
-
-/**
- * Gets name of the config file.
- *
- * @return string
- */
-function sc_get_config_file_name() {
-	return 'config-' . $_SERVER['HTTP_HOST'] . '.php';
+	return ( defined( 'SC_CONFIG_DIR' ) ) ? rtrim( SC_CONFIG_DIR, '/' ) : rtrim( WP_CONTENT_DIR, '/' );
 }
 
 /**
@@ -283,8 +271,8 @@ function sc_get_config_file_name() {
  * @return bool|array
  */
 function sc_load_config() {
-	if ( @file_exists( sc_get_config_dir() . '/' . sc_get_config_file_name() ) ) {
-		return include sc_get_config_dir() . '/' . sc_get_config_file_name();
+	if ( @file_exists( sc_get_config_dir() . '/simple-cache-config.php' ) ) {
+		return include sc_get_config_dir() . '/simple-cache-config.php';
 	}
 
 	return false;
