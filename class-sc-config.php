@@ -44,13 +44,10 @@ class SC_Config {
 	 * @return string
 	 */
 	private function get_config_file_name() {
-		if ( SC_IS_NETWORK ) {
-			return 'config-network.php';
-		} else {
-			$home_url_parts = wp_parse_url( home_url() );
 
-			return 'config-' . $home_url_parts['host'] . '.php';
-		}
+		$home_url_parts = wp_parse_url( home_url() );
+
+		return 'config-' . $home_url_parts['host'] . '.php';
 	}
 
 	/**
@@ -75,14 +72,13 @@ class SC_Config {
 	 *
 	 * @since  1.0
 	 * @param  array $config Configuration array.
-	 * @param  bool  $force_network Force network wide style write
 	 * @return bool
 	 */
-	public function write( $config, $force_network = false ) {
+	public function write( $config ) {
 
 		$config_dir = sc_get_config_dir();
 
-		$file_name = ( $force_network ) ? 'config-network.php' : $this->get_config_file_name();
+		$file_name = $this->get_config_file_name();
 
 		$config = wp_parse_args( $config, $this->get_defaults() );
 
@@ -92,11 +88,6 @@ class SC_Config {
 
 		if ( ! file_put_contents( $config_dir . '/' . $file_name, $config_file_string ) ) {
 			return false;
-		}
-
-		// Delete network config if not network activated
-		if ( 'config-network.php' !== $file_name ) {
-			@unlink( $config_dir . '/config-network.php' );
 		}
 
 		return true;
@@ -109,11 +100,8 @@ class SC_Config {
 	 * @return array
 	 */
 	public function get() {
-		if ( SC_IS_NETWORK ) {
-			$config = get_site_option( 'sc_simple_cache', $this->get_defaults() );
-		} else {
-			$config = get_option( 'sc_simple_cache', $this->get_defaults() );
-		}
+
+		$config = get_option( 'sc_simple_cache', $this->get_defaults() );
 
 		return wp_parse_args( $config, $this->get_defaults() );
 	}
@@ -128,13 +116,7 @@ class SC_Config {
 
 		$config_dir = sc_get_config_dir();
 
-		if ( SC_IS_NETWORK ) {
-			delete_site_option( 'sc_simple_cache' );
-		} else {
-			delete_option( 'sc_simple_cache' );
-		}
-
-		@unlink( $config_dir . '/config-network.php' );
+		delete_option( 'sc_simple_cache' );
 
 		if ( ! @unlink( $config_dir . '/' . $this->get_config_file_name() ) ) {
 			return false;

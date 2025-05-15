@@ -32,41 +32,20 @@ function sc_load_logged_in_cache(){
 /**
  * Clear the cache
  *
- * @param  bool $network_wide Flush all site caches
  * @since  1.4
  */
-function sc_cache_flush( $network_wide = false ) {
+function sc_cache_flush() {
 	$paths = array();
 
-	if ( $network_wide && SC_IS_NETWORK ) {
-		$sites = get_sites();
+	$url_parts = wp_parse_url( home_url() );
 
-		foreach ( $sites as $site ) {
-			switch_to_blog( $site->blog_id );
+	$path = sc_get_cache_dir() . '/' . untrailingslashit( $url_parts['host'] ) . '/';// TODO host can be undefined...
 
-			$url_parts = wp_parse_url( home_url() );
-
-			$path = sc_get_cache_dir() . '/' . untrailingslashit( $url_parts['host'] ) . '/';
-
-			if ( ! empty( $url_parts['path'] ) && '/' !== $url_parts['path'] ) {
-				$path .= trim( $url_parts['path'], '/' );
-			}
-
-			$paths[] = $path;
-
-			restore_current_blog();
-		}
-	} else {
-		$url_parts = wp_parse_url( home_url() );
-
-		$path = sc_get_cache_dir() . '/' . untrailingslashit( $url_parts['host'] ) . '/';// TODO host can be undefined...
-
-		if ( ! empty( $url_parts['path'] ) && '/' !== $url_parts['path'] ) {
-			$path .= trim( $url_parts['path'], '/' );
-		}
-
-		$paths[] = $path;
+	if ( ! empty( $url_parts['path'] ) && '/' !== $url_parts['path'] ) {
+		$path .= trim( $url_parts['path'], '/' );
 	}
+
+	$paths[] = $path;
 
 	foreach ( $paths as $rm_path ) {
 		sc_rrmdir( $rm_path );

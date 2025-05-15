@@ -14,14 +14,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// I'm not using multisite and I'm not sure this is correct
-// if ( is_multisite() ) {
-// 	$active_plugins = get_site_option( 'active_sitewide_plugins' );
-// 	if ( isset( $active_plugins[ plugin_basename( __FILE__ ) ] ) )
-// 		define( 'SC_IS_NETWORK', true );
-// }
-defined( 'SC_IS_NETWORK' ) || define( 'SC_IS_NETWORK', false );
-
 require_once __DIR__ . '/pre-wp-functions.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/class-sc-notices.php';
@@ -47,7 +39,7 @@ function sc_filter_plugin_action_links( $links, $file ) {
 
 	if ( 'simple-cache/simple-cache.php' === $file ) {// && current_user_can( 'manage_options' )// also could avoid hard-coding plugin name: basename( __DIR__ ) .'/'. basename( __FILE__ ) 
 		$links = (array) $links;
-		$links[] = '<a href="' . admin_url( 'options-general.php?page=simple-cache' ) . '">Settings</a>';// this isn't correct for network is it? I think it's network_admin_url('settings.php')
+		$links[] = '<a href="' . admin_url( 'options-general.php?page=simple-cache' ) . '">Settings</a>';
 	}
 
 	return $links;
@@ -57,11 +49,10 @@ add_filter( 'plugin_action_links', 'sc_filter_plugin_action_links', 10, 2 );
 /**
  * Clean up necessary files
  *
- * @param  bool $network Whether the plugin is network wide
  * @since 1.0
  */
-function sc_deactivate( $network ) {
-	sc_cache_flush( $network );
+function sc_deactivate() {
+	sc_cache_flush();
 	SC_Advanced_Cache::factory()->clean_up();
 	SC_Advanced_Cache::factory()->toggle_caching( false );
 	SC_Config::factory()->clean_up();
@@ -80,21 +71,16 @@ function sc_uninstall() {
 	// SC_Advanced_Cache::factory()->clean_up();
 	// SC_Advanced_Cache::factory()->toggle_caching( false );
 	SC_Config::factory()->clean_up();
-	sc_cache_flush( true );// $network attribute?
+	sc_cache_flush();
 }
 // register_uninstall_hook( __FILE__, 'sc_uninstall' );
 
 /**
  * Create config file
  *
- * @param  bool $network Whether the plugin is network wide
  * @since 1.0
  */
-function sc_activate( $network ) {
-	if ( $network ) {
-		SC_Config::factory()->write( array(), true );
-	} else {
-		SC_Config::factory()->write( array() );
-	}
+function sc_activate() {
+	SC_Config::factory()->write( array() );
 }
 add_action( 'activate_' . plugin_basename( __FILE__ ), 'sc_activate' );

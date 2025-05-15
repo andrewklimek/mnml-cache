@@ -21,13 +21,8 @@ class SC_Settings {
 		
 		add_action( 'rest_api_init', array( $this, 'register_api_endpoint' ) );
 		add_action( 'load-settings_page_simple-cache', array( $this, 'purge_cache' ) );
-		
-		if ( SC_IS_NETWORK ) {
-			add_action( 'network_admin_menu', array( $this, 'network_admin_menu' ) );
-		} else {
-			add_action( 'admin_menu', array( $this, 'action_admin_menu' ) );
-			add_action( 'admin_bar_menu', array( $this, 'admin_bar_menu' ) );
-		}
+		add_action( 'admin_menu', array( $this, 'action_admin_menu' ) );
+		add_action( 'admin_bar_menu', array( $this, 'admin_bar_menu' ) );
 	}
 	
 	public function register_api_endpoint() {
@@ -88,15 +83,6 @@ class SC_Settings {
 	}
 	
 	/**
-	* Output network setting menu option
-	*
-	* @since  1.7
-	*/
-	public function network_admin_menu() {
-		add_submenu_page( 'settings.php', 'Simple Cache', 'Simple Cache', 'manage_options', 'simple-cache', array( $this, 'settings_page' ) );
-	}
-	
-	/**
 	* Add purge cache button to admin bar
 	*
 	* @since 1,3
@@ -139,11 +125,7 @@ class SC_Settings {
 					wp_die( 'You need a higher level of permission.' );
 				}
 				
-				if ( SC_IS_NETWORK ) {
-					sc_cache_flush( true );
-				} else {
-					sc_cache_flush();
-				}
+				sc_cache_flush();
 				
 				if ( ! empty( $_REQUEST['wp_http_referer'] ) ) {
 					wp_safe_redirect( $_REQUEST['wp_http_referer'] );
@@ -170,22 +152,14 @@ class SC_Settings {
 			$verify_file_access = sc_verify_file_access();
 			
 			if ( is_array( $verify_file_access ) ) {
-				if ( SC_IS_NETWORK ) {
-					update_site_option( 'sc_cant_write', array_map( 'sanitize_text_field', $verify_file_access ) );
-				} else {
-					update_option( 'sc_cant_write', array_map( 'sanitize_text_field', $verify_file_access ) );
-				}
+				update_option( 'sc_cant_write', array_map( 'sanitize_text_field', $verify_file_access ) );
 				
 				if ( in_array( 'cache', $verify_file_access, true ) ) {
 					wp_safe_redirect( $_REQUEST['wp_http_referer'] );
 					exit;
 				}
 			} else {
-				if ( SC_IS_NETWORK ) {
-					delete_site_option( 'sc_cant_write' );
-				} else {
-					delete_option( 'sc_cant_write' );
-				}
+				delete_option( 'sc_cant_write' );
 			}
 			
 			$new_settings = $request['sc_simple_cache'];
@@ -196,11 +170,7 @@ class SC_Settings {
 			}
 			
 			// Back up configration in options.
-			if ( SC_IS_NETWORK ) {
-				update_site_option( 'sc_simple_cache', $clean_config );
-			} else {
-				update_option( 'sc_simple_cache', $clean_config );
-			}
+			update_option( 'sc_simple_cache', $clean_config );
 			
 			SC_Config::factory()->write( $clean_config );
 			

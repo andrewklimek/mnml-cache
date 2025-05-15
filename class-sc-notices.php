@@ -18,13 +18,8 @@ class SC_Notices {
 	 * @since 1.0
 	 */
 	private function setup() {
-		if ( SC_IS_NETWORK ) {
-			add_action( 'network_admin_notices', array( $this, 'error_notice' ) );
-			add_action( 'network_admin_notices', array( $this, 'setup_notice' ) );
-		} else {
-			add_action( 'admin_notices', array( $this, 'error_notice' ) );
-			add_action( 'admin_notices', array( $this, 'setup_notice' ) );
-		}
+		add_action( 'admin_notices', array( $this, 'error_notice' ) );
+		add_action( 'admin_notices', array( $this, 'setup_notice' ) );
 	}
 
 	/**
@@ -38,11 +33,7 @@ class SC_Notices {
 			return;
 		}
 
-		if ( SC_IS_NETWORK ) {
-			$cant_write = get_site_option( 'sc_cant_write', false );
-		} else {
-			$cant_write = get_option( 'sc_cant_write', false );
-		}
+		$cant_write = get_option( 'sc_cant_write', false );
 
 		if ( $cant_write ) {
 			return;
@@ -54,13 +45,11 @@ class SC_Notices {
 			return;
 		}
 
-		$file_name = ( SC_IS_NETWORK ) ? 'settings.php' : 'options-general.php';
-
 		?>
 		<div class="notice notice-warning">
 			<p>
 				<?php esc_html_e( "Simple Cache won't work until you turn it on.", 'simple-cache' ); ?>
-				<a href="<?php echo esc_attr( $file_name ); ?>?page=simple-cache&amp;wp_http_referer=<?php echo esc_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ); ?>&amp;action=sc_update&amp;sc_settings_nonce=<?php echo esc_attr( wp_create_nonce( 'sc_update_settings' ) ); ?>&amp;sc_simple_cache[enable_page_caching]=1" class="button button-primary" style="margin-left: 5px;"><?php esc_html_e( 'Turn On Caching', 'simple-cache' ); ?></a>
+				<a href="options-general.php?page=simple-cache&amp;wp_http_referer=<?php echo esc_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ); ?>&amp;action=sc_update&amp;sc_settings_nonce=<?php echo esc_attr( wp_create_nonce( 'sc_update_settings' ) ); ?>&amp;sc_simple_cache[enable_page_caching]=1" class="button button-primary" style="margin-left: 5px;"><?php esc_html_e( 'Turn On Caching', 'simple-cache' ); ?></a>
 			</p>
 		</div>
 		<?php
@@ -72,13 +61,9 @@ class SC_Notices {
 	 * @since  1.7
 	 */
 	public function error_notice() {
-		if ( SC_IS_NETWORK ) {
-			$setting_file = 'settings.php';
-			$cant_write   = get_site_option( 'sc_cant_write', array() );
-		} else {
-			$setting_file = 'options-general.php';
-			$cant_write   = get_option( 'sc_cant_write', array() );
-		}
+
+		$setting_file = 'options-general.php';
+		$cant_write   = get_option( 'sc_cant_write', array() );
 
 		$config = SC_Config::factory()->get();
 

@@ -114,11 +114,7 @@ class SC_Cron {
 			return;
 		}
 
-		if ( SC_IS_NETWORK ) {
-			sc_cache_flush( true );
-		} else {
-			sc_cache_flush();
-		}
+		sc_cache_flush();
 	}
 
 	/**

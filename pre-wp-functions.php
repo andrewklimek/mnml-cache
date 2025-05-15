@@ -286,15 +286,13 @@ function sc_get_config_file_name() {
 }
 
 /**
- * Load config. Use network if it exists. Only intended to be used pre-wp.
+ * Load config. Only intended to be used pre-wp.
  *
  * @since  1.7
  * @return bool|array
  */
 function sc_load_config() {
-	if ( @file_exists( sc_get_config_dir() . '/config-network.php' ) ) {
-		return include sc_get_config_dir() . '/config-network.php';
-	} elseif ( @file_exists( sc_get_config_dir() . '/' . sc_get_config_file_name() ) ) {
+	if ( @file_exists( sc_get_config_dir() . '/' . sc_get_config_file_name() ) ) {
 		return include sc_get_config_dir() . '/' . sc_get_config_file_name();
 	}
 
