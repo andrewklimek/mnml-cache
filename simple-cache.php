@@ -4,7 +4,7 @@
  * Plugin URI: 
  * Description: 
  * Author: 
- * Version: 1.0.0
+ * Version: 3.0.0
  * Text Domain: simple-cache
  * Domain Path: /languages
  * Author URI: 

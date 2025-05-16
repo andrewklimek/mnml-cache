@@ -6,9 +6,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-if ( ! function_exists( 'sc_serve_file_cache' ) ) {
-	return;
-}
+// https://github.com/Automattic/wp-super-cache/blob/88fc6d2b2b3800a34b42230b6b6796a2e6a9d95d/wp-cache-phase2.php#L1575
+
+require_once __DIR__ . '/pre-wp-functions.php';
 
 // Don't cache non-GET requests.
 if ( ! isset( $_SERVER['REQUEST_METHOD'] ) || 'GET' !== $_SERVER['REQUEST_METHOD'] ) {
@@ -21,8 +21,8 @@ if ( ! empty( $_COOKIE ) ) {
 	// https://github.com/WordPress/WordPress/blob/5bcb08099305b4572d2aeb97548d6a514291cc33/wp-includes/default-constants.php#L275
 	// https://github.com/WordPress/WordPress/blob/bc0c01b1ac747606882dad4a899a84f288ef6bde/wp-includes/user.php#L543
 	// https://github.com/WordPress/WordPress/blob/2602d7802145ef0627d84b60ea0fdd2762a33864/wp-includes/pluggable.php#L693
-	foreach ( $_COOKIE as $key => $value ) {
-		if ( strpos( $key, 'wordpress_logged_in_' ) !== false ) {
+	foreach (array_keys($_COOKIE) as $key) {
+			if ( strpos( $key, 'wordpress_logged_in_' ) !== false ) {
 			// Login cookie can be expired (the timestamp is the 2nd element if you explode on '|') but it's dangerous to cache when expired because:
 			// a) two wordpress_logged_in_ cookies can be present, https and http, and one can have a past expiration time
 			// b) there maybe be is not grace period and we'd cache a page with the admin bar

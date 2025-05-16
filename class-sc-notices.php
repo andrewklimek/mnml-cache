@@ -71,6 +71,8 @@ class SC_Notices {
 			return;
 		}
 
+		// TODO
+		// Attempt to fix actions below don't work because settings page actions are not performed on page load now, but are an API endpoint...
 		?>
 		<div class="error sc-notice">
 			<p><?php esc_html_e( 'Simple Cache has encountered the following error(s):', 'simple-cache' ); ?></p>
@@ -89,7 +91,7 @@ class SC_Notices {
 
 				<?php if ( in_array( 'config', $cant_write, true ) ) : ?>
 					<li>
-						<?php echo wp_kses_post( sprintf( __( 'Simple Cache could not create the necessary config file. Either click "Attempt Fix" or add the following code to <code>%s</code>:', 'simple-cache' ), esc_html( sc_get_config_dir() . '/simple-cache-config.php' ) ) ); ?>
+						<?php echo wp_kses_post( sprintf( __( 'Simple Cache could not create the necessary config file. Either click "Attempt Fix" or add the following code to <code>%s</code>:', 'simple-cache' ), esc_html( WP_CONTENT_DIR . '/simple-cache-config.php' ) ) ); ?>
 
 						<pre><?php echo esc_html( SC_Config::factory()->get_file_code() ); ?></pre>
 					</li>
@@ -97,9 +99,9 @@ class SC_Notices {
 
 				<?php if ( in_array( 'wp-content', $cant_write, true ) || $advanced_cache_broken ) : ?>
 					<li>
-						<?php echo wp_kses_post( sprintf( __( 'Simple Cache could not write advanced-cache.php to your wp-content directory or the file has been tampered with. Either click "Attempt Fix" or add the following code manually to <code>wp-content/advanced-cache.php</code>:', 'simple-cache' ), esc_html( sc_get_config_dir() . '/simple-cache-config.php' ) ) ); ?>
+						<?php echo wp_kses_post( sprintf( __( 'Simple Cache could not write advanced-cache.php to your wp-content directory or the file has been tampered with. Either click "Attempt Fix" or add the following code manually to <code>wp-content/advanced-cache.php</code>:', 'simple-cache' ), esc_html( WP_CONTENT_DIR . '/simple-cache-config.php' ) ) ); ?>
 
-						<pre><?php echo esc_html( SC_Advanced_Cache::factory()->get_file_code() ); ?></pre>
+						<pre><?php echo esc_html( file_get_contents( __DIR__ . '/advanced-cache.php' ) ); ?></pre>
 					</li>
 				<?php endif; ?>
 			</ol>

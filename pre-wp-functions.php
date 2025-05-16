@@ -13,13 +13,19 @@
  */
 function sc_file_cache( $buffer, $flags ) {
 
-	if ( ! defined( 'SC_FLAG_PAGE_DONE' ) || ! SC_FLAG_PAGE_DONE ) {
-		error_log('page didnt finish loading ' . $_SERVER['REQUEST_URI']);
+	// if ( ! defined( 'SC_FLAG_PAGE_DONE' ) || ! SC_FLAG_PAGE_DONE ) {
+	// 	error_log('page didnt finish loading ' . $_SERVER['REQUEST_URI']);
+	// 	return $buffer;
+	// }
+
+	if ( http_response_code() !== 200 ) {
 		return $buffer;
 	}
 
-	global $post;
-
+	$error = error_get_last();
+	if ( $error && ( $error['type'] & ( E_ERROR | E_CORE_ERROR | E_PARSE | E_COMPILE_ERROR | E_USER_ERROR ) ) ) {
+		return $buffer;
+	}
 
 	// error_log( "buffer connection_status: " . connection_status());
 
@@ -29,17 +35,15 @@ function sc_file_cache( $buffer, $flags ) {
 		return $buffer;
 	}
 
-	// Don't cache small requests unless it's a REST API request.
-	if ( mb_strlen( $buffer ) < 255 && ( ! defined( 'REST_REQUEST' ) || ! mb_strlen( $buffer ) > 0 ) ) {
-		return $buffer;
-	}
+	global $post;
 
-	// Don't cache search, 404, or password protected.
+	// if we aren't saving 404... might be worth dropping them immediately so they don't always build fancy 404 pages
+	// Don't cache search, 404, or password protected... TODO arent these handled before somewhere?
 	if ( is_404() || is_search() || ! empty( $post->post_password ) ) {
 		return $buffer;
 	}
 
-	// Do not cache the REST API if the user has not opted-in or it's an authenticated REST API request.
+	// Do not cache the REST API if the user has not opted-in or it's an authenticated REST API request. TODO is this the best way to handle authenticated APPI calls?
 	if ( defined( 'REST_REQUEST' ) && REST_REQUEST && ( empty( $GLOBALS['sc_config']['page_cache_enable_rest_api_cache'] ) || ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) ) {
 		return $buffer;
 	}
@@ -60,18 +64,18 @@ function sc_file_cache( $buffer, $flags ) {
 			// Can not cache!
 			return $buffer;
 		}
-	} else {
-		$buffer = apply_filters( 'sc_pre_cache_buffer', $buffer );
 	}
 
 	$url_path = sc_get_url_path();
 
 	$dirs = explode( '/', $url_path );
 
+	$file_name = array_pop( $dirs );
+
 	$path = $cache_dir;
 
 	foreach ( $dirs as $dir ) {
-		if ( ! empty( $dir ) ) {
+		// if ( ! empty( $dir ) ) {// this skips '0' dirs for sharding... just make sure sc_get_url_path() doesn't return crap
 			$path .= '/' . $dir;
 
 			if ( ! file_exists( $path ) ) {
@@ -80,7 +84,7 @@ function sc_file_cache( $buffer, $flags ) {
 					return $buffer;
 				}
 			}
-		}
+		// }
 	}
 
 	$modified_time = time(); // Make sure modified time is consistent.
@@ -113,18 +117,18 @@ function sc_file_cache( $buffer, $flags ) {
 
 	// Save the response body.
 	if ( ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) && function_exists( 'gzencode' ) ) {
-		file_put_contents( $path . '/index.gzip' . $file_extension, gzencode( $buffer, 3 ) );
-		touch( $path . '/index.gzip' . $file_extension, $modified_time );
+		file_put_contents( $path . '/' . $file_name . '.gzip' . $file_extension, gzencode( $buffer, 3 ) );
+		touch( $path . '/' . $file_name . '.gzip' . $file_extension, $modified_time );
 	} else {
-		file_put_contents( $path . '/index' . $file_extension, $buffer );
-		touch( $path . '/index' . $file_extension, $modified_time );
+		file_put_contents( $path . '/' . $file_name . $file_extension, $buffer );
+		touch( $path . '/' . $file_name . $file_extension, $modified_time );
 	}
 
 	header( 'Last-Modified: ' . gmdate( 'D, d M Y H:i:s', $modified_time ) . ' GMT' );
 
 	// Save the resonse headers.
 	if ( ! empty( $GLOBALS['sc_config']['page_cache_restore_headers'] ) ) {
-		file_put_contents( $path . '/headers.json', wp_json_encode( headers_list() ) );
+		file_put_contents( $path . '/' . $file_name . '.headers.json', wp_json_encode( headers_list() ) );
 	}
 
 	header( 'Cache-Control: no-cache' ); // Check back every time to see if re-download is necessary.
@@ -146,7 +150,41 @@ function sc_file_cache( $buffer, $flags ) {
  */
 function sc_get_url_path() {
 
-	return $_SERVER['REQUEST_URI'];
+	// return $_SERVER['REQUEST_URI'];
+	$url = $_SERVER['REQUEST_URI'];
+    $parsed = parse_url($url);
+    $path = $file_name = isset($parsed['path']) ? trim($parsed['path'], '/') : '';
+	$segments = explode('/', $path);
+    array_pop($segments);
+	$url_dir = $segments ? implode('/', $segments) : '_root';
+	// if (strlen($url_dir) > 100) // could truncate or limit depth
+	if (isset($parsed['query'])) {
+		$params = [];
+        parse_str($parsed['query'], $params);
+		ksort($params);
+		// might need to handle wildcards like utm*
+        // $whitelist = !empty($GLOBALS['sc_config']['param_whitelist']) ? array_map('trim', explode(',', $GLOBALS['sc_config']['param_whitelist'])) : [];
+        // $filtered_params = array_intersect_key($params, array_flip($whitelist));
+        $blacklist = !empty($GLOBALS['sc_config']['param_blacklist']) ? array_map('trim', explode(',', $GLOBALS['sc_config']['param_blacklist'])) : ['utm','fbclid','gclid','_ga'];
+        $filtered_params = array_diff_key($params, array_flip($blacklist));
+        if ($filtered_params) {
+            $file_name .= '_' . http_build_query( $filtered_params );
+        }
+    }
+	$file_name = md5( $file_name );// new
+	$shard = substr( $file_name, 0, 1 );
+	// skip for md5
+	// if ($shard === '') {
+	// 	$shard = '_';
+	// 	$file_name = 'index';
+    // }
+	// if ($url_dir === '') {
+    //     $url_dir = '_root';
+    // }
+	// if ( isset($parsed['query']) ) {
+	// 	$file_name .= '_' . preg_replace('/[^a-zA-Z0-9-]/', '_', $parsed['query'] );
+	// }
+	return "$url_dir/$shard/$file_name";
 }
 
 /**
@@ -170,19 +208,19 @@ function sc_serve_file_cache($do_logged_in=false) {
 
 	$cache_dir = ( defined( 'SC_CACHE_DIR' ) ) ? rtrim( SC_CACHE_DIR, '/' ) : rtrim( WP_CONTENT_DIR, '/' ) . '/cache/simple-cache';
 
-	$file_name = 'index.';
+	$file_name = '';
 
 	if ( ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) && function_exists( 'gzencode' ) ) {
-		$file_name = 'index.gzip.';
+		$file_name = '.gzip';
 	}
 
 	if ( $do_logged_in ) {// could be set to user ID 0 
 		$file_name .= "{$do_logged_in}.";
 	}
 
-	$html_path   = $cache_dir . '/' . rtrim( sc_get_url_path(), '/' ) . '/' . $file_name . 'html';
-	$json_path   = $cache_dir . '/' . rtrim( sc_get_url_path(), '/' ) . '/' . $file_name . 'json';
-	$header_path = $cache_dir . '/' . rtrim( sc_get_url_path(), '/' ) . '/headers.json';
+	$html_path   = $cache_dir . '/' . sc_get_url_path() . $file_name . '.html';
+	$json_path   = $cache_dir . '/' . sc_get_url_path() . $file_name . '.json';
+	$header_path = $cache_dir . '/' . sc_get_url_path() . $file_name . '.headers.json';
 
 	if ( @file_exists( $html_path ) && @is_readable( $html_path ) ) {
 		$path = $html_path;
@@ -254,28 +292,6 @@ function sc_serve_file_cache($do_logged_in=false) {
  */
 function sc_get_cache_dir() {
 	return ( defined( 'SC_CACHE_DIR' ) ) ? rtrim( SC_CACHE_DIR, '/' ) : rtrim( WP_CONTENT_DIR, '/' ) . '/cache/simple-cache';
-}
-
-/**
- * Get config directory
- *
- * @return string
- */
-function sc_get_config_dir() {
-	return ( defined( 'SC_CONFIG_DIR' ) ) ? rtrim( SC_CONFIG_DIR, '/' ) : rtrim( WP_CONTENT_DIR, '/' );
-}
-
-/**
- * Load config. Only intended to be used pre-wp.
- *
- * @return bool|array
- */
-function sc_load_config() {
-	if ( @file_exists( sc_get_config_dir() . '/simple-cache-config.php' ) ) {
-		return include sc_get_config_dir() . '/simple-cache-config.php';
-	}
-
-	return false;
 }
 
 /**

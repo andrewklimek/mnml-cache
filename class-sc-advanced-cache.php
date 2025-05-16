@@ -109,26 +109,25 @@ class SC_Advanced_Cache {
 	 */
 	public function write() {
 
-		$file = untrailingslashit( WP_CONTENT_DIR ) . '/advanced-cache.php';
+		$source_file = __DIR__ . '/advanced-cache.php';
+        $destination_file = untrailingslashit( WP_CONTENT_DIR ) . '/advanced-cache.php';
 
-		// phpcs:disable
-		$file_string = '<?php ' .
-		"\r\n" . "defined( 'ABSPATH' ) || exit;" .
-		"\r\n" . "define( 'SC_ADVANCED_CACHE', true );" .
-		"\r\n" . 'if ( is_admin() ) { return; }' .
-		"\r\n" . "\$plugin_path = defined( 'WP_PLUGIN_DIR' ) ? WP_PLUGIN_DIR : WP_CONTENT_DIR . '/plugins/';" .
-		"\r\n" . "include_once( \$plugin_path . '/simple-cache/pre-wp-functions.php' );" .
-		"\r\n" . "\$GLOBALS['sc_config'] = sc_load_config();" .
-		"\r\n" . "if ( empty( \$GLOBALS['sc_config'] ) || empty( \$GLOBALS['sc_config']['enable_page_caching'] ) ) { return; }" .
-		"\r\n" . "if ( @file_exists( \$plugin_path . '/simple-cache/file-based-page-cache.php' ) ) { include_once( \$plugin_path . '/simple-cache/file-based-page-cache.php' ); }" .
-		"\r\n";
-		// phpcs:enable
+        // Check if the source file exists
+        if ( ! file_exists( $source_file ) ) {
+            return false;
+        }
 
-		if ( ! file_put_contents( $file, $file_string ) ) {
-			return false;
-		}
+        // Copy the file
+        if ( ! copy( $source_file, $destination_file ) ) {
+            return false;
+        }
 
-		return true;
+        // Verify the file was copied correctly
+        if ( ! file_exists( $destination_file ) || filesize( $destination_file ) === 0 ) {
+            return false;
+        }
+
+        return true;
 	}
 
 

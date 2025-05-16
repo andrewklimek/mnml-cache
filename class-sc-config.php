@@ -59,15 +59,13 @@ class SC_Config {
 	 */
 	public function write( $config ) {
 
-		$config_dir = sc_get_config_dir();
-
 		$config = wp_parse_args( $config, $this->get_defaults() );
 
-		@mkdir( $config_dir );
+		// @mkdir( $config_dir );// if ever a custom dir...
 
 		$config_file_string = $this->get_file_code( $config );
 
-		if ( ! file_put_contents( $config_dir . '/simple-cache-config.php', $config_file_string ) ) {
+		if ( ! file_put_contents( WP_CONTENT_DIR . '/simple-cache-config.php', $config_file_string ) ) {
 			return false;
 		}
 
@@ -93,11 +91,9 @@ class SC_Config {
 	 */
 	public function clean_up() {
 
-		$config_dir = sc_get_config_dir();
-
 		delete_option( 'sc_simple_cache' );
 
-		if ( ! @unlink( $config_dir . '/simple-cache-config.php' ) ) {
+		if ( ! @unlink( WP_CONTENT_DIR . '/simple-cache-config.php' ) ) {
 			return false;
 		}
 

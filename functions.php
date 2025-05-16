@@ -8,11 +8,11 @@
 
 // add_action('shutdown', function(){ error_log( "shutdown connection_status: " . connection_status());});
 
-add_action( 'wp_footer', 'sc_flag_page_done', 99999999 );
-function sc_flag_page_done() {
-	defined( 'SC_FLAG_PAGE_DONE' ) || define( 'SC_FLAG_PAGE_DONE', TRUE );
+// add_action( 'wp_footer', 'sc_flag_page_done', 99999999 );
+// function sc_flag_page_done() {
+	// defined( 'SC_FLAG_PAGE_DONE' ) || define( 'SC_FLAG_PAGE_DONE', TRUE );
 	// error_log('flag page finished loading ' . $_SERVER['REQUEST_URI']);
-}
+// }
 
 if ( !empty( $GLOBALS['sc_cache_logged_in'] ) ) {
 // 	add_filter( 'show_admin_bar', '__return_false' );
@@ -65,13 +65,13 @@ function sc_verify_file_access() {
 	}
 
 	// Make sure config directory or parent is writeable
-	if ( file_exists( sc_get_config_dir() ) ) {
-		if ( ! @is_writable( sc_get_config_dir() ) ) {
+	if ( file_exists( WP_CONTENT_DIR ) ) {
+		if ( ! @is_writable( WP_CONTENT_DIR ) ) {
 			$errors[] = 'config';
 		}
 	} else {
-		if ( file_exists( dirname( sc_get_config_dir() ) ) ) {
-			if ( ! @is_writable( dirname( sc_get_config_dir() ) ) ) {
+		if ( file_exists( dirname( WP_CONTENT_DIR ) ) ) {
+			if ( ! @is_writable( dirname( WP_CONTENT_DIR ) ) ) {
 				$errors[] = 'config';
 			}
 		} else {
