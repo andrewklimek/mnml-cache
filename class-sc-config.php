@@ -65,7 +65,7 @@ class SC_Config {
 
 		$config_file_string = $this->get_file_code( $config );
 
-		if ( ! file_put_contents( WP_CONTENT_DIR . '/simple-cache-config.php', $config_file_string ) ) {
+		if ( ! file_put_contents( WP_CONTENT_DIR . '/mnml-cache-config.php', $config_file_string ) ) {
 			return false;
 		}
 
@@ -79,7 +79,7 @@ class SC_Config {
 	 */
 	public function get() {
 
-		$config = get_option( 'sc_simple_cache', $this->get_defaults() );
+		$config = get_option( 'sc_mnml_cache', $this->get_defaults() );
 
 		return wp_parse_args( $config, $this->get_defaults() );
 	}
@@ -91,9 +91,9 @@ class SC_Config {
 	 */
 	public function clean_up() {
 
-		delete_option( 'sc_simple_cache' );
+		delete_option( 'sc_mnml_cache' );
 
-		if ( ! @unlink( WP_CONTENT_DIR . '/simple-cache-config.php' ) ) {
+		if ( ! @unlink( WP_CONTENT_DIR . '/mnml-cache-config.php' ) ) {
 			return false;
 		}
 

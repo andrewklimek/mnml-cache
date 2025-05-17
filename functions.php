@@ -1,8 +1,6 @@
 <?php
 /**
  * Utility functions for plugin
- *
- * @package  simple-cache
  */
 
 
@@ -34,7 +32,7 @@ function sc_load_logged_in_cache(){
  */
 function sc_cache_flush() {
 
-	sc_rrmdir( sc_get_cache_dir() );
+	sc_rrmdir( SC_CACHE_DIR );
 
 	if ( function_exists( 'wp_cache_flush' ) ) {
 		wp_cache_flush();
@@ -42,9 +40,34 @@ function sc_cache_flush() {
 }
 
 /**
+ * Clear one page
+ */
+function sc_cache_purge($url) {
+
+	$url_path = sc_get_url_path($url);
+
+    $is_api = strpos($url_path, 'wp-json/') === 0;
+    $ext = $is_api ? '.json' : '.html';
+    $cache_file = $url_path . $ext;
+    $gzip_file = $url_path . ".gzip" . $ext;
+    $header_file = $url_path . ".headers.json";
+    if (file_exists($cache_file)) {
+        unlink($cache_file);
+    }
+    if (file_exists($gzip_file)) {
+        unlink($gzip_file);
+    }
+    if (file_exists($header_file)) {
+        unlink($header_file);
+    }
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log("mnml cache: Purged cache for URL: $url");
+    }
+}
+
+/**
  * Verify we can write to the file system
  *
- * @since  1.7
  * @return array|boolean
  */
 function sc_verify_file_access() {
@@ -80,18 +103,18 @@ function sc_verify_file_access() {
 	}
 
 	// Make sure cache directory or parent is writeable
-	if ( file_exists( sc_get_cache_dir() ) ) {
-		if ( ! @is_writable( sc_get_cache_dir() ) ) {
+	if ( file_exists( SC_CACHE_DIR ) ) {
+		if ( ! @is_writable( SC_CACHE_DIR ) ) {
 			$errors[] = 'cache';
 		}
 	} else {
-		if ( file_exists( dirname( sc_get_cache_dir() ) ) ) {
-			if ( ! @is_writable( dirname( sc_get_cache_dir() ) ) ) {
+		if ( file_exists( dirname( SC_CACHE_DIR ) ) ) {
+			if ( ! @is_writable( dirname( SC_CACHE_DIR ) ) ) {
 				$errors[] = 'cache';
 			}
 		} else {
-			if ( file_exists( dirname( dirname( sc_get_cache_dir() ) ) ) ) {
-				if ( ! @is_writable( dirname( dirname( sc_get_cache_dir() ) ) ) ) {
+			if ( file_exists( dirname( dirname( SC_CACHE_DIR ) ) ) ) {
+				if ( ! @is_writable( dirname( dirname( SC_CACHE_DIR ) ) ) ) {
 					$errors[] = 'cache';
 				}
 			} else {
@@ -111,7 +134,6 @@ function sc_verify_file_access() {
  * Remove directory and all it's contents
  *
  * @param  string $dir Directory
- * @since  1.7
  */
 function sc_rrmdir($dir, $retain_root = true) {
 

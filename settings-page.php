@@ -4,20 +4,20 @@
  * Should be included with variables $options, $endpoint, $title (optional)
  */
 
-if ( empty( $options ) || empty( $endpoint ) ) return;
+if ( empty( $options ) ) return;
 
 // XMLHttpRequest version:
 // $nonce = "x.setRequestHeader('X-WP-Nonce','". wp_create_nonce('wp_rest') ."')";
 // <form onsubmit="event.preventDefault();var t=this,b=t.querySelector('.button-primary'),x=new XMLHttpRequest;x.open('POST','<php echo $url.'settings'; >'),<php echo $nonce; >,x.onload=function(){b.innerText=JSON.parse(x.response);t.addEventListener('input',function(){b.innerText='Save Changes'})},x.send(new FormData(t))">
-$nonce = "headers:{'X-WP-Nonce':'". wp_create_nonce('wp_rest') ."'}";
+// $nonce = "headers:{'X-WP-Nonce':'". wp_create_nonce('wp_rest') ."'}";
 
 echo "<div class=wrap>";
 if ( !empty( $title ) ) echo "<h1>$title</h1>";
-echo '<form onsubmit="';
-echo "event.preventDefault();var t=this,b=t.querySelector('.button-primary');fetch('{$endpoint}',{method:'POST',{$nonce},body:new FormData(this),})";
-echo ".then(r=>{return r.json()}).then(r=>{b.innerText=r;t.addEventListener('input',function(){b.innerText='Save Changes'})})";
-echo '">';
-
+// echo '<form onsubmit="';
+// echo "event.preventDefault();var t=this,b=t.querySelector('.button-primary');fetch('{$endpoint}',{method:'POST',{$nonce},body:new FormData(this),})";
+// echo ".then(r=>{return r.json()}).then(r=>{b.innerText=r;t.addEventListener('input',function(){b.innerText='Save Changes'})})";
+// echo '">';
+echo '<form method=post>';
 // $values = [];
 // foreach ( $options as $g => $fields ) {
 // 	$values += get_option( $g, [] );
@@ -25,9 +25,11 @@ echo '">';
 
 $script = '';
 echo '<table class=form-table>';
+wp_nonce_field( 'sc_update_settings', 'sc_settings_nonce' );
+echo '<input type="hidden" name="action" value="sc_update">';
 foreach ( $options as $g => $fields ) {
 	// $values = get_option($g);
-	echo "<input type=hidden name='{$g}[x]' value=1>";// hidden field to make sure things still update if all options are empty (defaults)
+	// echo "<input type=hidden name='{$g}[x]' value=1>";// hidden field to make sure things still update if all options are empty (defaults)
 	foreach ( $fields as $k => $f ) {
 		if ( !empty( $f['before'] ) ) echo "<tr><th>" . $f['before'];
 		$v = isset( $values[$k] ) ? $values[$k] : '';

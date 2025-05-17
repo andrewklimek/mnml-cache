@@ -1,15 +1,16 @@
 <?php
-/**
- * Plugin Name: Mnml Cache
- * Plugin URI: 
- * Description: 
- * Author: 
- * Version: 3.0.0
- * Text Domain: simple-cache
- * Domain Path: /languages
- * Author URI: 
- *
- */
+/*
+Plugin Name: Mnml Cache
+Plugin URI:  https://github.com/andrewklimek/mnml-contact/
+Description: 
+Author:      Andrew J Klimek
+Author URI:  https://andrewklimek.com
+License:     GPL2
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+Version: 1.0.0
+Text Domain: mnml-cache
+Domain Path: /languages
+*/
 
 defined( 'ABSPATH' ) || exit;
 
@@ -22,11 +23,9 @@ SC_Notices::factory();
 SC_Settings::factory();
 $config = SC_Config::factory()->get();
 
-if ( ! empty( $config['enable_page_caching'] ) ) {
+if ( ! empty( $config['enable_caching'] ) ) {
 	require_once __DIR__ . '/class-sc-advanced-cache.php';
-	require_once __DIR__ . '/class-sc-cron.php';
 	SC_Advanced_Cache::factory();
-	SC_Cron::factory();
 }
 
 /**
@@ -38,9 +37,9 @@ if ( ! empty( $config['enable_page_caching'] ) ) {
  */
 function sc_filter_plugin_action_links( $links, $file ) {
 
-	if ( 'simple-cache/simple-cache.php' === $file ) {// && current_user_can( 'manage_options' )// also could avoid hard-coding plugin name: basename( __DIR__ ) .'/'. basename( __FILE__ ) 
+	if ( 'mnml-cache/mnml-cache.php' === $file ) {// && current_user_can( 'manage_options' )// also could avoid hard-coding plugin name: basename( __DIR__ ) .'/'. basename( __FILE__ ) 
 		$links = (array) $links;
-		$links[] = '<a href="' . admin_url( 'options-general.php?page=simple-cache' ) . '">Settings</a>';
+		$links[] = '<a href="' . admin_url( 'options-general.php?page=mnml-cache' ) . '">Settings</a>';
 	}
 
 	return $links;

@@ -51,7 +51,7 @@ if ( strpos( $_SERVER['REQUEST_URI'], '.' ) && strpos( $_SERVER['REQUEST_URI'], 
 }
 
 // exceptions
-if ( ! empty( $GLOBALS['sc_config']['advanced_mode'] ) && ! empty( $GLOBALS['sc_config']['cache_only_urls'] ) ) {
+if ( ! empty( $GLOBALS['sc_config']['cache_only_urls'] ) ) {
 	$exceptions = preg_split( '<[\r\n]>', $GLOBALS['sc_config']['cache_only_urls'], 0, PREG_SPLIT_NO_EMPTY );
 
 	$regex = ! empty( $GLOBALS['sc_config']['enable_url_exemption_regex'] );
@@ -67,7 +67,7 @@ if ( ! empty( $GLOBALS['sc_config']['advanced_mode'] ) && ! empty( $GLOBALS['sc_
 		return;
 	}
 }
-elseif ( ! empty( $GLOBALS['sc_config']['advanced_mode'] ) && ! empty( $GLOBALS['sc_config']['cache_exception_urls'] ) ) {
+elseif ( ! empty( $GLOBALS['sc_config']['cache_exception_urls'] ) ) {
 	$exceptions = preg_split( '<[\r\n]>', $GLOBALS['sc_config']['cache_exception_urls'], 0, PREG_SPLIT_NO_EMPTY );
 
 	$regex = ! empty( $GLOBALS['sc_config']['enable_url_exemption_regex'] );

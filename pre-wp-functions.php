@@ -3,6 +3,7 @@
  * Holds functions that can be loaded in advanced-cache.php
  *
  */
+defined( 'SC_CACHE_DIR' ) || define( 'SC_CACHE_DIR', WP_CONTENT_DIR . '/cache/mnml-cache' );
 
 /**
  * Cache output before it goes to the browser
@@ -48,43 +49,36 @@ function sc_file_cache( $buffer, $flags ) {
 		return $buffer;
 	}
 
-	$cache_dir = sc_get_cache_dir();
-
 	// Make sure we can read/write files to cache dir parent
-	if ( ! file_exists( dirname( $cache_dir ) ) ) {
-		if ( ! @mkdir( dirname( $cache_dir ) ) ) {
+	if ( ! file_exists( dirname( SC_CACHE_DIR ) ) ) {
+		if ( ! @mkdir( dirname( SC_CACHE_DIR ) ) ) {
 			// Can not cache!
 			return $buffer;
 		}
 	}
 
 	// Make sure we can read/write files to cache dir
-	if ( ! file_exists( $cache_dir ) ) {
-		if ( ! @mkdir( $cache_dir ) ) {
+	if ( ! file_exists( SC_CACHE_DIR ) ) {
+		if ( ! @mkdir( SC_CACHE_DIR ) ) {
 			// Can not cache!
 			return $buffer;
 		}
 	}
 
 	$url_path = sc_get_url_path();
-
 	$dirs = explode( '/', $url_path );
-
 	$file_name = array_pop( $dirs );
-
-	$path = $cache_dir;
+	$path = array_shift( $dirs );
 
 	foreach ( $dirs as $dir ) {
-		// if ( ! empty( $dir ) ) {// this skips '0' dirs for sharding... just make sure sc_get_url_path() doesn't return crap
-			$path .= '/' . $dir;
+		$path .= '/' . $dir;
 
-			if ( ! file_exists( $path ) ) {
-				if ( ! @mkdir( $path ) ) {
-					// Can not cache!
-					return $buffer;
-				}
+		if ( ! file_exists( $path ) ) {
+			if ( ! @mkdir( $path ) ) {
+				// Can not cache!
+				return $buffer;
 			}
-		// }
+		}
 	}
 
 	$modified_time = time(); // Make sure modified time is consistent.
@@ -108,7 +102,7 @@ function sc_file_cache( $buffer, $flags ) {
 	}
 
 	if ( $file_extension == '.html' ) {
-		$buffer .= "\n<!-- cached by Simple Cache at " . gmdate( 'd M Y H:i:s', $modified_time ) . " UTC -->";
+		$buffer .= "\n<!-- cached by mnml cache at " . gmdate( 'd M Y H:i:s', $modified_time ) . " UTC -->";
 	}
 
 	if ( !empty( $GLOBALS['sc_cache_logged_in'] ) && $id = get_current_user_id() ) {
@@ -117,23 +111,23 @@ function sc_file_cache( $buffer, $flags ) {
 
 	// Save the response body.
 	if ( ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) && function_exists( 'gzencode' ) ) {
-		file_put_contents( $path . '/' . $file_name . '.gzip' . $file_extension, gzencode( $buffer, 3 ) );
-		touch( $path . '/' . $file_name . '.gzip' . $file_extension, $modified_time );
+		file_put_contents( $url_path . '.gzip' . $file_extension, gzencode( $buffer, 3 ) );
+		touch( $url_path . '.gzip' . $file_extension, $modified_time );
 	} else {
-		file_put_contents( $path . '/' . $file_name . $file_extension, $buffer );
-		touch( $path . '/' . $file_name . $file_extension, $modified_time );
+		file_put_contents( $url_path . $file_extension, $buffer );
+		touch( $url_path . $file_extension, $modified_time );
 	}
 
 	header( 'Last-Modified: ' . gmdate( 'D, d M Y H:i:s', $modified_time ) . ' GMT' );
 
 	// Save the resonse headers.
 	if ( ! empty( $GLOBALS['sc_config']['page_cache_restore_headers'] ) ) {
-		file_put_contents( $path . '/' . $file_name . '.headers.json', wp_json_encode( headers_list() ) );
+		file_put_contents( $url_path . '.headers.json', wp_json_encode( headers_list() ) );
 	}
 
 	header( 'Cache-Control: no-cache' ); // Check back every time to see if re-download is necessary.
 
-	header( 'X-Simple-Cache: MISS' );
+	header( 'X-Mnml-Cache: MISS' );
 
 
 	if ( function_exists( 'ob_gzhandler' ) && ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) ) {
@@ -148,14 +142,14 @@ function sc_file_cache( $buffer, $flags ) {
  *
  * @return string
  */
-function sc_get_url_path() {
+function sc_get_url_path( $url='' ) {
 
 	// return $_SERVER['REQUEST_URI'];
-	$url = $_SERVER['REQUEST_URI'];
+	$url = $url ?: $_SERVER['REQUEST_URI'];
     $parsed = parse_url($url);
     $path = $file_name = isset($parsed['path']) ? trim($parsed['path'], '/') : '';
 	$segments = explode('/', $path);
-    array_pop($segments);
+    $page = array_pop($segments);
 	$url_dir = $segments ? implode('/', $segments) : '_root';
 	// if (strlen($url_dir) > 100) // could truncate or limit depth
 	if (isset($parsed['query'])) {
@@ -172,7 +166,7 @@ function sc_get_url_path() {
         }
     }
 	$file_name = md5( $file_name );// new
-	$shard = substr( $file_name, 0, 1 );
+	$shard = $page === '' ? '_home' : substr( $file_name, 0, 1 );// put home page in special _root/_home/ dir
 	// skip for md5
 	// if ($shard === '') {
 	// 	$shard = '_';
@@ -184,29 +178,17 @@ function sc_get_url_path() {
 	// if ( isset($parsed['query']) ) {
 	// 	$file_name .= '_' . preg_replace('/[^a-zA-Z0-9-]/', '_', $parsed['query'] );
 	// }
-	return "$url_dir/$shard/$file_name";
-}
-
-/**
- * Get URL path for caching
- *
- * @return string
- */
-function sc_get_cache_path() {
-	return rtrim( WP_CONTENT_DIR, '/' ) . '/cache/simple-cache';
+	return SC_CACHE_DIR . "/$url_dir/$shard/$file_name";
 }
 
 /**
  * Optionally serve cache and exit
- *
  */
 function sc_serve_file_cache($do_logged_in=false) {
 
 	if ( false === $do_logged_in && !empty( $GLOBALS['sc_cache_logged_in'] ) ) {
 		return;
 	}
-
-	$cache_dir = ( defined( 'SC_CACHE_DIR' ) ) ? rtrim( SC_CACHE_DIR, '/' ) : rtrim( WP_CONTENT_DIR, '/' ) . '/cache/simple-cache';
 
 	$file_name = '';
 
@@ -218,9 +200,10 @@ function sc_serve_file_cache($do_logged_in=false) {
 		$file_name .= "{$do_logged_in}.";
 	}
 
-	$html_path   = $cache_dir . '/' . sc_get_url_path() . $file_name . '.html';
-	$json_path   = $cache_dir . '/' . sc_get_url_path() . $file_name . '.json';
-	$header_path = $cache_dir . '/' . sc_get_url_path() . $file_name . '.headers.json';
+	$url_path = sc_get_url_path();
+	$html_path   = $url_path . $file_name . '.html';
+	$json_path   = $url_path . $file_name . '.json';
+	$header_path = $url_path . $file_name . '.headers.json';
 
 	if ( @file_exists( $html_path ) && @is_readable( $html_path ) ) {
 		$path = $html_path;
@@ -262,7 +245,7 @@ function sc_serve_file_cache($do_logged_in=false) {
 		header( 'Content-Encoding: gzip' );
 	}
 
-	header( 'X-Simple-Cache: HIT' );
+	header( 'X-Mnml-Cache: HIT' );
 
 	// if ( ! $do_logged_in ) {// could be set to user ID 0 
 		@readfile( $path );
@@ -283,15 +266,6 @@ function sc_serve_file_cache($do_logged_in=false) {
 	// wp_admin_bar_render();
 	// exit;
 
-}
-
-/**
- * Get cache directory
- *
- * @return string
- */
-function sc_get_cache_dir() {
-	return ( defined( 'SC_CACHE_DIR' ) ) ? rtrim( SC_CACHE_DIR, '/' ) : rtrim( WP_CONTENT_DIR, '/' ) . '/cache/simple-cache';
 }
 
 /**
