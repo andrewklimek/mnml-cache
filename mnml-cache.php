@@ -16,15 +16,16 @@ defined( 'ABSPATH' ) || exit;
 
 require_once __DIR__ . '/pre-wp-functions.php';
 require_once __DIR__ . '/functions.php';
-require_once __DIR__ . '/class-sc-notices.php';
-require_once __DIR__ . '/class-sc-settings.php';
-require_once __DIR__ . '/class-sc-config.php';
+require_once __DIR__ . '/class-mc-notices.php';
+require_once __DIR__ . '/class-mc-settings.php';
+require_once __DIR__ . '/class-mc-config.php';
+require_once __DIR__ . '/cloudflare.php';
 SC_Notices::factory();
 SC_Settings::factory();
 $config = SC_Config::factory()->get();
 
 if ( ! empty( $config['enable_caching'] ) ) {
-	require_once __DIR__ . '/class-sc-advanced-cache.php';
+	require_once __DIR__ . '/class-mc-cache.php';
 	SC_Advanced_Cache::factory();
 }
 
@@ -35,7 +36,7 @@ if ( ! empty( $config['enable_caching'] ) ) {
  * @param  string $plugin_file Path to plugin file.
  * @return array
  */
-function sc_filter_plugin_action_links( $links, $file ) {
+function mc_filter_plugin_action_links( $links, $file ) {
 
 	if ( 'mnml-cache/mnml-cache.php' === $file ) {// && current_user_can( 'manage_options' )// also could avoid hard-coding plugin name: basename( __DIR__ ) .'/'. basename( __FILE__ ) 
 		$links = (array) $links;
@@ -44,18 +45,18 @@ function sc_filter_plugin_action_links( $links, $file ) {
 
 	return $links;
 }
-add_filter( 'plugin_action_links', 'sc_filter_plugin_action_links', 10, 2 );
+add_filter( 'plugin_action_links', 'mc_filter_plugin_action_links', 10, 2 );
 
 /**
  * Clean up necessary files
  */
-function sc_deactivate() {
-	sc_cache_flush();
+function mc_deactivate() {
+	mc_cache_flush();
 	SC_Advanced_Cache::factory()->clean_up();
 	SC_Advanced_Cache::factory()->toggle_caching( false );
 	SC_Config::factory()->clean_up();
 }
-add_action( 'deactivate_' . plugin_basename( __FILE__ ), 'sc_deactivate' );
+add_action( 'deactivate_' . plugin_basename( __FILE__ ), 'mc_deactivate' );
 
 /**
  * Would prefer to only delete cache when uninstalling
@@ -65,18 +66,18 @@ add_action( 'deactivate_' . plugin_basename( __FILE__ ), 'sc_deactivate' );
  * https://github.com/WordPress/wordpress-develop/blob/0cb8475c0d07d23893b1d73d755eda5f12024585/src/wp-admin/includes/plugin.php#L1252
  *  or even trigger that uninstall function
  */
-function sc_uninstall() {
+function mc_uninstall() {
 	// SC_Advanced_Cache::factory()->clean_up();
 	// SC_Advanced_Cache::factory()->toggle_caching( false );
 	SC_Config::factory()->clean_up();
-	sc_cache_flush();
+	mc_cache_flush();
 }
-// register_uninstall_hook( __FILE__, 'sc_uninstall' );
+// register_uninstall_hook( __FILE__, 'mc_uninstall' );
 
 /**
  * Create config file
  */
-function sc_activate() {
+function mc_activate() {
 	SC_Config::factory()->write( array() );
 }
-add_action( 'activate_' . plugin_basename( __FILE__ ), 'sc_activate' );
+add_action( 'activate_' . plugin_basename( __FILE__ ), 'mc_activate' );

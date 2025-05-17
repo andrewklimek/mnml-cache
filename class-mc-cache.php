@@ -79,7 +79,7 @@ class SC_Advanced_Cache {
 			return;
 		}
 
-		sc_cache_flush();
+		mc_cache_flush();
 	}
 
 	/**

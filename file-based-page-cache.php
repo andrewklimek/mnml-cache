@@ -26,11 +26,11 @@ if ( ! empty( $_COOKIE ) ) {
 			// Login cookie can be expired (the timestamp is the 2nd element if you explode on '|') but it's dangerous to cache when expired because:
 			// a) two wordpress_logged_in_ cookies can be present, https and http, and one can have a past expiration time
 			// b) there maybe be is not grace period and we'd cache a page with the admin bar
-			if ( empty( $GLOBALS['sc_config']['private_cache'] ) ) {
+			if ( empty( $GLOBALS['mc_config']['private_cache'] ) ) {
 				// error_log('logged in and private cache is turned off');
 				return;
 			}
-			$GLOBALS['sc_cache_logged_in'] = 0;// TODO I forget why I used 0 for this
+			$GLOBALS['mc_cache_logged_in'] = 0;// TODO I forget why I used 0 for this
 			break;
 		}
 	}
@@ -51,13 +51,13 @@ if ( strpos( $_SERVER['REQUEST_URI'], '.' ) && strpos( $_SERVER['REQUEST_URI'], 
 }
 
 // exceptions
-if ( ! empty( $GLOBALS['sc_config']['cache_only_urls'] ) ) {
-	$exceptions = preg_split( '<[\r\n]>', $GLOBALS['sc_config']['cache_only_urls'], 0, PREG_SPLIT_NO_EMPTY );
+if ( ! empty( $GLOBALS['mc_config']['cache_only_urls'] ) ) {
+	$exceptions = preg_split( '<[\r\n]>', $GLOBALS['mc_config']['cache_only_urls'], 0, PREG_SPLIT_NO_EMPTY );
 
-	$regex = ! empty( $GLOBALS['sc_config']['enable_url_exemption_regex'] );
+	$regex = ! empty( $GLOBALS['mc_config']['enable_url_exemption_regex'] );
 	$matched = false;
 	foreach ( $exceptions as $exception ) {
-		if ( sc_url_exception_match( $exception, $regex ) ) {
+		if ( mc_url_exception_match( $exception, $regex ) ) {
 			$matched = true;
 			break;
 		}
@@ -67,21 +67,21 @@ if ( ! empty( $GLOBALS['sc_config']['cache_only_urls'] ) ) {
 		return;
 	}
 }
-elseif ( ! empty( $GLOBALS['sc_config']['cache_exception_urls'] ) ) {
-	$exceptions = preg_split( '<[\r\n]>', $GLOBALS['sc_config']['cache_exception_urls'], 0, PREG_SPLIT_NO_EMPTY );
+elseif ( ! empty( $GLOBALS['mc_config']['cache_exception_urls'] ) ) {
+	$exceptions = preg_split( '<[\r\n]>', $GLOBALS['mc_config']['cache_exception_urls'], 0, PREG_SPLIT_NO_EMPTY );
 
-	$regex = ! empty( $GLOBALS['sc_config']['enable_url_exemption_regex'] );
+	$regex = ! empty( $GLOBALS['mc_config']['enable_url_exemption_regex'] );
 
 	foreach ( $exceptions as $exception ) {
-		if ( sc_url_exception_match( $exception, $regex ) ) {
+		if ( mc_url_exception_match( $exception, $regex ) ) {
 			// error_log("skipping exception $exception");
 			return;
 		}
 	}
 }
 
-if ( isset( $GLOBALS['sc_cache_logged_in'] ) ) $GLOBALS['sc_cache_logged_in'] = true;
+if ( isset( $GLOBALS['mc_cache_logged_in'] ) ) $GLOBALS['mc_cache_logged_in'] = true;
 
-sc_serve_file_cache();
+mc_serve_file_cache();
 // error_log('ob_start');
-ob_start( 'sc_file_cache' );
+ob_start( 'mc_file_cache' );

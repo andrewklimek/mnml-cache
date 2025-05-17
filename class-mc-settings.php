@@ -45,7 +45,7 @@ class SC_Settings {
 	*/
 	public function settings_page() {
 
-		$options = [ 'sc_mnml_cache' => self::get_options() ];
+		$options = [ 'mnml_cache' => self::get_options() ];
 		
 		/**
 		*  Build Settings Page using framework in settings_page.php
@@ -77,27 +77,27 @@ class SC_Settings {
 		// $current_url = rawurlencode( (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] );
 		$current_url = urlencode( $_SERVER['REQUEST_URI'] );
 
-		$nonce = wp_create_nonce('sc_purge_cache');
+		$nonce = wp_create_nonce('mc_purge_cache');
     
 		$wp_admin_bar->add_node([
 			'id'     => 'mnml-cache',
 			'parent' => 'top-secondary',
 			'title'  => 'Cache',
+			'href'   => admin_url( 'options-general.php?page=mnml-cache' ),
 		]);
 
 		$wp_admin_bar->add_node([
 			'id' => 'mnml-cache-purge-page',
 			'parent' => 'mnml-cache',
-			'title' => 'Purge this page',
-			'href'   => admin_url( 'options-general.php?page=mnml-cache&url=' . rawurlencode( $_SERVER['REQUEST_URI'] ) . '&action=sc_purge_cache&current=1&nonce=' . $nonce ),// url_esc'd at render by core
-			'meta' => ['title' => 'purge cache for the current page']
+			'title' => 'Purge This Page',
+			'href'   => admin_url( 'options-general.php?page=mnml-cache&url=' . rawurlencode( $_SERVER['REQUEST_URI'] ) . '&action=mc_purge_cache&current=1&nonce=' . $nonce ),// url_esc'd at render by core
 		]);
 		
 		$wp_admin_bar->add_node([
 			'id'     => 'mnml-cache-purge-all',
 			'parent' => 'mnml-cache',
 			'title'  => 'Purge All',
-			'href'   => admin_url( 'options-general.php?page=mnml-cache&url=' . rawurlencode( $_SERVER['REQUEST_URI'] ) . '&action=sc_purge_cache&nonce=' . $nonce ),
+			'href'   => admin_url( 'options-general.php?page=mnml-cache&url=' . rawurlencode( $_SERVER['REQUEST_URI'] ) . '&action=mc_purge_cache&nonce=' . $nonce ),
 		]);
 	}
 	
@@ -113,16 +113,16 @@ class SC_Settings {
 	*/
 	public function purge_cache() {
 
-		if ( empty( $_REQUEST['action'] ) || 'sc_purge_cache' !== $_REQUEST['action'] ) return;// but isnt this the only way we get here?
+		if ( empty( $_REQUEST['action'] ) || 'mc_purge_cache' !== $_REQUEST['action'] ) return;// but isnt this the only way we get here?
 
-		if ( ! current_user_can( 'manage_options' ) || empty( $_REQUEST['nonce'] ) || ! wp_verify_nonce( $_REQUEST['nonce'], 'sc_purge_cache' ) ) {
+		if ( ! current_user_can( 'manage_options' ) || empty( $_REQUEST['nonce'] ) || ! wp_verify_nonce( $_REQUEST['nonce'], 'mc_purge_cache' ) ) {
 			wp_die( 'You need a higher level of permission.' );
 		}
 		
 		if ( empty( $_REQUEST['current'] ) ) {
-			sc_cache_flush();
+			mc_cache_flush();
 		} elseif ( ! empty( $_REQUEST['url'] ) ) {
-			sc_cache_purge( $_REQUEST['url'] );
+			mc_cache_purge( $_REQUEST['url'] );
 		}
 		
 		if ( ! empty( $_REQUEST['url'] ) ) {
@@ -138,40 +138,40 @@ class SC_Settings {
 
 		// var_export( $_REQUEST);
 					
-		if ( empty( $_REQUEST['action'] ) || 'sc_update' !== $_REQUEST['action'] ) return;
+		if ( empty( $_REQUEST['action'] ) || 'mc_update' !== $_REQUEST['action'] ) return;
 		
-		if ( ! current_user_can( 'manage_options' ) || empty( $_REQUEST['sc_settings_nonce'] ) || ! wp_verify_nonce( $_REQUEST['sc_settings_nonce'], 'sc_update_settings' ) ) {
+		if ( ! current_user_can( 'manage_options' ) || empty( $_REQUEST['mc_settings_nonce'] ) || ! wp_verify_nonce( $_REQUEST['mc_settings_nonce'], 'mc_update_settings' ) ) {
 			wp_die( 'You need a higher level of permission.' );
 		}
 		
-		$verify_file_access = sc_verify_file_access();
+		$verify_file_access = mc_verify_file_access();
 		
 		if ( is_array( $verify_file_access ) ) {
-			update_option( 'sc_cant_write', array_map( 'sanitize_text_field', $verify_file_access ) );
+			update_option( 'mc_cant_write', array_map( 'sanitize_text_field', $verify_file_access ) );
 			
 			if ( in_array( 'cache', $verify_file_access, true ) ) {
 				wp_safe_redirect( $_REQUEST['url'] );
 				exit;
 			}
 		} else {
-			delete_option( 'sc_cant_write' );
+			delete_option( 'mc_cant_write' );
 		}
 		
 		$config = SC_Config::factory()->get();
 
 		// so this runs for various actions besides updating settings... I assume this will never be present durong such times?
-		if ( !empty( $_REQUEST['sc_mnml_cache'] ) ) {
+		if ( !empty( $_REQUEST['mnml_cache'] ) ) {
 
-			$config = array_map( 'htmlspecialchars', $_REQUEST['sc_mnml_cache'] );
+			$config = array_map( 'htmlspecialchars', $_REQUEST['mnml_cache'] );
 			
 			// Back up configration in options.
-			update_option( 'sc_mnml_cache', $config );
+			update_option( 'mnml_cache', $config );
 			
 			SC_Config::factory()->write( $config );
 		}
 		
 		
-		require_once __DIR__ . '/class-sc-advanced-cache.php';
+		require_once __DIR__ . '/class-mc-cache.php';
 		
 		if ( $config['enable_caching'] ) {
 			SC_Advanced_Cache::factory()->write();

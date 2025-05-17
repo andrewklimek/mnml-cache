@@ -30,7 +30,7 @@ class SC_Notices {
 			return;
 		}
 
-		$cant_write = get_option( 'sc_cant_write', false );
+		$cant_write = get_option( 'mc_cant_write', false );
 
 		if ( $cant_write ) {
 			return;
@@ -46,7 +46,7 @@ class SC_Notices {
 		<div class="notice notice-warning">
 			<p>
 				<?php esc_html_e( "mnml cache won't work until you turn it on.", 'mnml-cache' ); ?>
-				<a href="options-general.php?page=mnml-cache&amp;url=<?php echo esc_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ); ?>&amp;action=sc_update&amp;sc_settings_nonce=<?php echo esc_attr( wp_create_nonce( 'sc_update_settings' ) ); ?>&amp;sc_mnml_cache[enable_caching]=1" class="button button-primary" style="margin-left: 5px;"><?php esc_html_e( 'Turn On Caching', 'mnml-cache' ); ?></a>
+				<a href="options-general.php?page=mnml-cache&amp;url=<?php echo esc_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ); ?>&amp;action=mc_update&amp;mc_settings_nonce=<?php echo esc_attr( wp_create_nonce( 'mc_update_settings' ) ); ?>&amp;mnml_cache[enable_caching]=1" class="button button-primary" style="margin-left: 5px;"><?php esc_html_e( 'Turn On Caching', 'mnml-cache' ); ?></a>
 			</p>
 		</div>
 		<?php
@@ -59,7 +59,7 @@ class SC_Notices {
 	public function error_notice() {
 
 		$setting_file = 'options-general.php';
-		$cant_write   = get_option( 'sc_cant_write', array() );
+		$cant_write   = get_option( 'mc_cant_write', array() );
 
 		$config = SC_Config::factory()->get();
 
@@ -107,7 +107,7 @@ class SC_Notices {
 			</ol>
 
 			<p>
-				<a href="<?php echo esc_attr( $setting_file ); ?>?page=mnml-cache&amp;url=<?php echo esc_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ); ?>&amp;action=sc_update&amp;sc_settings_nonce=<?php echo esc_attr( wp_create_nonce( 'sc_update_settings' ) ); ?>" class="button button-primary" style="margin-left: 5px;"><?php esc_html_e( 'Attempt Fix', 'mnml-cache' ); ?></a>
+				<a href="<?php echo esc_attr( $setting_file ); ?>?page=mnml-cache&amp;url=<?php echo esc_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ); ?>&amp;action=mc_update&amp;mc_settings_nonce=<?php echo esc_attr( wp_create_nonce( 'mc_update_settings' ) ); ?>" class="button button-primary" style="margin-left: 5px;"><?php esc_html_e( 'Attempt Fix', 'mnml-cache' ); ?></a>
 			</p>
 		</div>
 		<?php

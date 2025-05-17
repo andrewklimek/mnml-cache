@@ -12,7 +12,7 @@ defined( 'SC_CACHE_DIR' ) || define( 'SC_CACHE_DIR', WP_CONTENT_DIR . '/cache/mn
  * @param  int    $flags OB flags to be passed through.
  * @return string
  */
-function sc_file_cache( $buffer, $flags ) {
+function mc_file_cache( $buffer, $flags ) {
 
 	// if ( ! defined( 'SC_FLAG_PAGE_DONE' ) || ! SC_FLAG_PAGE_DONE ) {
 	// 	error_log('page didnt finish loading ' . $_SERVER['REQUEST_URI']);
@@ -31,7 +31,7 @@ function sc_file_cache( $buffer, $flags ) {
 	// error_log( "buffer connection_status: " . connection_status());
 
 	// safety to really not cache logged in pages incase the pre-wp check is somehow faulty
-	if ( empty( $GLOBALS['sc_config']['sc_cache_logged_in'] ) && is_user_logged_in() ) {
+	if ( empty( $GLOBALS['mc_config']['mc_cache_logged_in'] ) && is_user_logged_in() ) {
 		error_log("!!! WOULD HAVE CACHED A LOGGED IN USER !!!");
 		return $buffer;
 	}
@@ -45,7 +45,7 @@ function sc_file_cache( $buffer, $flags ) {
 	}
 
 	// Do not cache the REST API if the user has not opted-in or it's an authenticated REST API request. TODO is this the best way to handle authenticated APPI calls?
-	if ( defined( 'REST_REQUEST' ) && REST_REQUEST && ( empty( $GLOBALS['sc_config']['page_cache_enable_rest_api_cache'] ) || ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) ) {
+	if ( defined( 'REST_REQUEST' ) && REST_REQUEST && ( empty( $GLOBALS['mc_config']['page_cache_enable_rest_api_cache'] ) || ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) ) {
 		return $buffer;
 	}
 
@@ -65,7 +65,7 @@ function sc_file_cache( $buffer, $flags ) {
 		}
 	}
 
-	$url_path = sc_get_url_path();
+	$url_path = mc_get_url_path();
 	$dirs = explode( '/', $url_path );
 	$file_name = array_pop( $dirs );
 	$path = array_shift( $dirs );
@@ -105,12 +105,12 @@ function sc_file_cache( $buffer, $flags ) {
 		$buffer .= "\n<!-- cached by mnml cache at " . gmdate( 'd M Y H:i:s', $modified_time ) . " UTC -->";
 	}
 
-	if ( !empty( $GLOBALS['sc_cache_logged_in'] ) && $id = get_current_user_id() ) {
+	if ( !empty( $GLOBALS['mc_cache_logged_in'] ) && $id = get_current_user_id() ) {
 		$file_extension = ".{$id}{$file_extension}";
 	}
 
 	// Save the response body.
-	if ( ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) && function_exists( 'gzencode' ) ) {
+	if ( ! empty( $GLOBALS['mc_config']['enable_gzip_compression'] ) && function_exists( 'gzencode' ) ) {
 		file_put_contents( $url_path . '.gzip' . $file_extension, gzencode( $buffer, 3 ) );
 		touch( $url_path . '.gzip' . $file_extension, $modified_time );
 	} else {
@@ -121,16 +121,17 @@ function sc_file_cache( $buffer, $flags ) {
 	header( 'Last-Modified: ' . gmdate( 'D, d M Y H:i:s', $modified_time ) . ' GMT' );
 
 	// Save the resonse headers.
-	if ( ! empty( $GLOBALS['sc_config']['page_cache_restore_headers'] ) ) {
+	if ( ! empty( $GLOBALS['mc_config']['page_cache_restore_headers'] ) ) {
 		file_put_contents( $url_path . '.headers.json', wp_json_encode( headers_list() ) );
 	}
 
-	header( 'Cache-Control: no-cache' ); // Check back every time to see if re-download is necessary.
+	// header( 'Cache-Control: no-cache' ); // Check back every time to see if re-download is necessary.
+	header( 'Cache-Control: max-age=' . HOUR_IN_SECONDS );
 
-	header( 'X-Mnml-Cache: MISS' );
+	// header( 'X-Mnml-Cache: MISS' );// this ends up shoing on CDN results if they are the first to serve the file.  Better to just have HIT vs nothing
 
 
-	if ( function_exists( 'ob_gzhandler' ) && ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) ) {
+	if ( function_exists( 'ob_gzhandler' ) && ! empty( $GLOBALS['mc_config']['enable_gzip_compression'] ) ) {
 		return ob_gzhandler( $buffer, $flags );
 	} else {
 		return $buffer;
@@ -142,7 +143,7 @@ function sc_file_cache( $buffer, $flags ) {
  *
  * @return string
  */
-function sc_get_url_path( $url='' ) {
+function mc_get_url_path( $url='' ) {
 
 	// return $_SERVER['REQUEST_URI'];
 	$url = $url ?: $_SERVER['REQUEST_URI'];
@@ -157,9 +158,9 @@ function sc_get_url_path( $url='' ) {
         parse_str($parsed['query'], $params);
 		ksort($params);
 		// might need to handle wildcards like utm*
-        // $whitelist = !empty($GLOBALS['sc_config']['param_whitelist']) ? array_map('trim', explode(',', $GLOBALS['sc_config']['param_whitelist'])) : [];
+        // $whitelist = !empty($GLOBALS['mc_config']['param_whitelist']) ? array_map('trim', explode(',', $GLOBALS['mc_config']['param_whitelist'])) : [];
         // $filtered_params = array_intersect_key($params, array_flip($whitelist));
-        $blacklist = !empty($GLOBALS['sc_config']['param_blacklist']) ? array_map('trim', explode(',', $GLOBALS['sc_config']['param_blacklist'])) : ['utm','fbclid','gclid','_ga'];
+        $blacklist = !empty($GLOBALS['mc_config']['param_blacklist']) ? array_map('trim', explode(',', $GLOBALS['mc_config']['param_blacklist'])) : ['utm','fbclid','gclid','_ga'];
         $filtered_params = array_diff_key($params, array_flip($blacklist));
         if ($filtered_params) {
             $file_name .= '_' . http_build_query( $filtered_params );
@@ -184,15 +185,15 @@ function sc_get_url_path( $url='' ) {
 /**
  * Optionally serve cache and exit
  */
-function sc_serve_file_cache($do_logged_in=false) {
+function mc_serve_file_cache($do_logged_in=false) {
 
-	if ( false === $do_logged_in && !empty( $GLOBALS['sc_cache_logged_in'] ) ) {
+	if ( false === $do_logged_in && !empty( $GLOBALS['mc_cache_logged_in'] ) ) {
 		return;
 	}
 
 	$file_name = '';
 
-	if ( ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) && function_exists( 'gzencode' ) ) {
+	if ( ! empty( $GLOBALS['mc_config']['enable_gzip_compression'] ) && function_exists( 'gzencode' ) ) {
 		$file_name = '.gzip';
 	}
 
@@ -200,7 +201,7 @@ function sc_serve_file_cache($do_logged_in=false) {
 		$file_name .= "{$do_logged_in}.";
 	}
 
-	$url_path = sc_get_url_path();
+	$url_path = mc_get_url_path();
 	$html_path   = $url_path . $file_name . '.html';
 	$json_path   = $url_path . $file_name . '.json';
 	$header_path = $url_path . $file_name . '.headers.json';
@@ -217,7 +218,7 @@ function sc_serve_file_cache($do_logged_in=false) {
 	$modified_time = @filemtime( $path );
 
 	if ( $modified_time && ! empty( $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) && strtotime( $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) === $modified_time ) {
-		if ( function_exists( 'gzencode' ) && ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) ) {
+		if ( function_exists( 'gzencode' ) && ! empty( $GLOBALS['mc_config']['enable_gzip_compression'] ) ) {
 			header( 'Content-Encoding: gzip' );
 		}
 
@@ -232,7 +233,7 @@ function sc_serve_file_cache($do_logged_in=false) {
 			header( $header );
 		}
 	} else {
-		header( 'Cache-Control: max-age=' . DAY_IN_SECONDS );
+		header( 'Cache-Control: max-age=' . HOUR_IN_SECONDS );
 		// header( 'Cache-Control: no-cache' );
 
 		if ( $modified_time ) {
@@ -241,7 +242,7 @@ function sc_serve_file_cache($do_logged_in=false) {
 	}
 
 	// Set the GZIP header if we are serving gzipped content.
-	if ( function_exists( 'gzencode' ) && ! empty( $GLOBALS['sc_config']['enable_gzip_compression'] ) ) {
+	if ( function_exists( 'gzencode' ) && ! empty( $GLOBALS['mc_config']['enable_gzip_compression'] ) ) {
 		header( 'Content-Encoding: gzip' );
 	}
 
@@ -275,7 +276,7 @@ function sc_serve_file_cache($do_logged_in=false) {
  * @param  bool   $regex Whether to check with regex or not.
  * @return boolean
  */
-function sc_url_exception_match( $rule, $regex = false ) {
+function mc_url_exception_match( $rule, $regex = false ) {
 
 	$rule = trim( $rule );
 

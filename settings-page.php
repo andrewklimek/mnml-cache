@@ -25,8 +25,8 @@ echo '<form method=post>';
 
 $script = '';
 echo '<table class=form-table>';
-wp_nonce_field( 'sc_update_settings', 'sc_settings_nonce' );
-echo '<input type="hidden" name="action" value="sc_update">';
+wp_nonce_field( 'mc_update_settings', 'mc_settings_nonce' );
+echo '<input type="hidden" name="action" value="mc_update">';
 foreach ( $options as $g => $fields ) {
 	// $values = get_option($g);
 	// echo "<input type=hidden name='{$g}[x]' value=1>";// hidden field to make sure things still update if all options are empty (defaults)
