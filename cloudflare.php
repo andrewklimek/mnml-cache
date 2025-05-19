@@ -1,5 +1,9 @@
 <?php
-
+/**
+ * Cloudflare Integration
+ * 
+ * TODO add setting for key ... store in a separate option line, thats why i didnt do it right away.
+ */
 function mnmlcache_cloudflare_purge_urls($urls) {
 	$api_token = get_option('mnmlcache_cloudflare_api_token');
     $zone_id = mnmlcache_get_cloudflare_zone_id($api_token);

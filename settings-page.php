@@ -115,5 +115,5 @@ foreach ( $options as $g => $fields ) {
 }
 if ( $script ) echo "<script>$script</script>";
 echo "</table>";
-echo "<div style='position:fixed;bottom:0;left:0;right:0;padding:16px 0 16px 180px;z-index:1;background:#333b41'><button class=button-primary>Save Changes</button></div>";
+echo "<div style='position:fixed;bottom:0;left:0;right:0;padding:16px 0 16px 180px;z-index:1;background:#1d2327'><button class=button-primary>Save Changes</button></div>";
 echo "</form></div>";

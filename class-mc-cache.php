@@ -8,7 +8,7 @@ defined('ABSPATH') || exit;
 /**
  * Wrapper for advanced cache functionality
  */
-class SC_Advanced_Cache {
+class MC_Advanced_Cache {
 
 	/**
 	 * Setup hooks/filters
@@ -31,7 +31,7 @@ class SC_Advanced_Cache {
 		$comment = get_comment($comment_id);
 		$post_id = $comment->comment_post_ID;
 
-		$path = SC_CACHE_DIR . '/' . preg_replace('#https?://#i', '', get_permalink($post_id));
+		$path = MC_CACHE_DIR . '/' . preg_replace('#https?://#i', '', get_permalink($post_id));
 
 		@unlink(untrailingslashit($path) . '/index.html');
 		@unlink(untrailingslashit($path) . '/index.gzip.html');
@@ -51,7 +51,7 @@ class SC_Advanced_Cache {
 
 		$post_id = $commentdata['comment_post_ID'];
 
-		$path = SC_CACHE_DIR . '/' . preg_replace('#https?://#i', '', get_permalink($post_id));
+		$path = MC_CACHE_DIR . '/' . preg_replace('#https?://#i', '', get_permalink($post_id));
 
 		@unlink(untrailingslashit($path) . '/index.html');
 		@unlink(untrailingslashit($path) . '/index.gzip.html');

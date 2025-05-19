@@ -9,7 +9,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Wrap notices functionality
  */
-class SC_Notices {
+class MC_Notices {
 
 	/**
 	 * Setup actions and filters
@@ -36,7 +36,7 @@ class SC_Notices {
 			return;
 		}
 
-		$config = SC_Config::factory()->get();
+		$config = MC_Config::factory()->get();
 
 		if ( ! empty( $config['enable_caching'] ) ) {
 			return;
@@ -61,11 +61,11 @@ class SC_Notices {
 		$setting_file = 'options-general.php';
 		$cant_write   = get_option( 'mc_cant_write', array() );
 
-		$config = SC_Config::factory()->get();
+		$config = MC_Config::factory()->get();
 
 		$wp_cache_broken = ! empty( $config['enable_caching'] ) && ( ! defined( 'WP_CACHE' ) || ! WP_CACHE );
 
-		$advanced_cache_broken = ! $wp_cache_broken && ! empty( $config['enable_caching'] ) && ( ! defined( 'SC_ADVANCED_CACHE' ) || ! SC_ADVANCED_CACHE );
+		$advanced_cache_broken = ! $wp_cache_broken && ! empty( $config['enable_caching'] ) && ( ! defined( 'MC_ADVANCED_CACHE' ) || ! MC_ADVANCED_CACHE );
 
 		if ( empty( $cant_write ) && ! $wp_cache_broken && ! $advanced_cache_broken ) {
 			return;
@@ -93,7 +93,7 @@ class SC_Notices {
 					<li>
 						<?php echo wp_kses_post( sprintf( __( 'mnml cache could not create the necessary config file. Either click "Attempt Fix" or add the following code to <code>%s</code>:', 'mnml-cache' ), esc_html( WP_CONTENT_DIR . '/mnml-cache-config.php' ) ) ); ?>
 
-						<pre><?php echo esc_html( SC_Config::factory()->get_file_code() ); ?></pre>
+						<pre><?php echo esc_html( MC_Config::factory()->get_file_code() ); ?></pre>
 					</li>
 				<?php endif; ?>
 

@@ -9,7 +9,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Class wrapping config functionality
  */
-class SC_Config {
+class MC_Config {
 
 	/**
 	 * Return defaults
@@ -18,7 +18,7 @@ class SC_Config {
 	 */
 	public function get_defaults() {
 
-		$options = SC_Settings::factory()->get_options();
+		$options = MC_Settings::factory()->get_options();
 
 		$defaults = [];
 
@@ -103,7 +103,7 @@ class SC_Config {
 	/**
 	 * Return an instance of the current class, create one if it doesn't exist
 	 *
-	 * @return SC_Config
+	 * @return MC_Config
 	 */
 	public static function factory() {
 

@@ -8,23 +8,130 @@
 
 // add_action( 'wp_footer', 'mc_flag_page_done', 99999999 );
 // function mc_flag_page_done() {
-	// defined( 'SC_FLAG_PAGE_DONE' ) || define( 'SC_FLAG_PAGE_DONE', TRUE );
+	// defined( 'MC_FLAG_PAGE_DONE' ) || define( 'MC_FLAG_PAGE_DONE', TRUE );
 	// error_log('flag page finished loading ' . $_SERVER['REQUEST_URI']);
 // }
 
-if ( !empty( $GLOBALS['mc_cache_logged_in'] ) ) {
-// 	add_filter( 'show_admin_bar', '__return_false' );
-// 	add_action( 'wp_footer', 'mc_wp_admin_bar_placeholder', 1000 );
-	add_action( 'template_redirect', 'mc_load_logged_in_cache', 1 );// admin bar gets initiated on 0
-}
+/**
+ * Cache output before it goes to the browser
+ *
+ * @param  string $buffer Page HTML.
+ * @param  int    $flags OB flags to be passed through.
+ * @return string
+ */
+function mc_file_cache( $buffer, $flags ) {
 
-function mc_wp_admin_bar_placeholder() {
-	echo "<!-- mnml-cache--wp_admin_bar_placeholder -->";
-}
+	// https://github.com/Automattic/wp-super-cache/blob/88fc6d2b2b3800a34b42230b6b6796a2e6a9d95d/wp-cache-phase2.php#L2069
 
-function mc_load_logged_in_cache(){
-	// add_filter( 'show_admin_bar', '__return_true', 11 );
-	mc_serve_file_cache( get_current_user_id() );
+	// if ( ! defined( 'MC_FLAG_PAGE_DONE' ) || ! MC_FLAG_PAGE_DONE ) {
+	// 	error_log('page didnt finish loading ' . $_SERVER['REQUEST_URI']);
+	// 	return $buffer;
+	// }
+
+	// why do they have these 2 hooks to "catch" the code? https://github.com/Automattic/wp-super-cache/blob/88fc6d2b2b3800a34b42230b6b6796a2e6a9d95d/wp-cache-phase2.php#L1566
+	if ( http_response_code() !== 200 ) {
+		return $buffer;
+	}
+
+	$error = error_get_last();
+	if ( $error && ( $error['type'] & ( E_ERROR | E_CORE_ERROR | E_PARSE | E_COMPILE_ERROR | E_USER_ERROR ) ) ) {
+		return $buffer;
+	}
+
+	if ( defined( 'MNML_DONTCACHE' ) && MNML_DONTCACHE ) {
+        return $buffer;
+    }
+
+	// error_log( "buffer connection_status: " . connection_status());
+
+	// safety to really not cache logged in pages incase the pre-wp check is somehow faulty
+	if ( is_user_logged_in() ) {
+		error_log("!!! WOULD HAVE CACHED A LOGGED IN USER !!!");
+		return $buffer;
+	}
+
+	if ( isset( $_GET['preview'] ) ) {
+		return $buffer;
+	}
+	
+	// if we aren't saving 404... might be worth dropping them immediately so they don't always build fancy 404 pages
+	// Don't cache search, 404, or password protected... TODO arent these handled before somewhere?
+	global $post;
+	if ( is_404() || is_search() || ! empty( $post->post_password ) ) {
+		return $buffer;
+	}
+
+	// exclude authenticaed api calls but might not always be JSON
+	if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
+		return $buffer;
+	}
+
+	// Do not cache the REST API if the user has not opted-in or it's an authenticated REST API request.
+	if ( defined( 'REST_REQUEST' ) && REST_REQUEST && empty( $GLOBALS['mc_config']['enable_json_cache'] ) ) {
+		return $buffer;
+	}
+
+	// one loop through to both prepare headers & do one more JSON check (custom JSON responses that don't use WP REST API)
+	$headers = [];
+	header_remove('X-Powered-By');
+	foreach ( headers_list() as $header ) {
+		if ( empty( $GLOBALS['mc_config']['enable_json_cache'] ) && stripos( $header, 'Content-Type: application/json' ) === 0 ) {
+			return $buffer;
+		}
+		// if ( substr( $header, 0, 2 ) === 'X-' ) continue;
+		$headers[] = $header;
+	}
+	error_log(var_export($headers,1));
+
+
+	// Make sure we can read/write files to cache dir parent
+	if ( ! file_exists( dirname( MC_CACHE_DIR ) ) && ! @mkdir( dirname( MC_CACHE_DIR ) ) ) {
+		return $buffer;
+	}
+
+	// Make sure we can read/write files to cache dir
+	if ( ! file_exists( MC_CACHE_DIR ) && ! @mkdir( MC_CACHE_DIR ) ) {
+		return $buffer;
+	}
+
+	$path = mc_get_url_path();
+	$dirs = explode( '/', $path );
+	$file_name = array_pop( $dirs );
+	$dir_path = array_shift( $dirs );
+
+	foreach ( $dirs as $dir ) {
+		$dir_path .= '/' . $dir;
+		if ( ! file_exists( $dir_path ) && ! @mkdir( $dir_path ) ) {
+			return $buffer;
+		}
+	}
+
+	// Save the response body.
+	if ( ! empty( $GLOBALS['mc_config']['enable_gzip_compression'] ) && function_exists( 'gzencode' ) && strlen( $buffer ) > 999 ) {
+		file_put_contents( $path . '.gzip', gzencode( $buffer, 3 ) );
+	} else {
+		file_put_contents( $path, $buffer );
+	}
+
+	if ( ! empty( $GLOBALS['mc_config']['restore_headers'] ) ) {
+		file_put_contents( $path . '.json', json_encode( $headers, JSON_UNESCAPED_SLASHES ) );
+	}
+
+
+	header( 'Last-Modified: ' . gmdate( 'D, d M Y H:i:s' ) . ' GMT' );
+
+	// TODO why either one of these?
+	// header( 'Cache-Control: no-cache' ); // Check back every time to see if re-download is necessary.
+	header( 'Cache-Control: max-age=' . HOUR_IN_SECONDS );
+
+	// header( 'X-Mnml-Cache: MISS' );// this ends up shoing on CDN results if they are the first to serve the file.  Better to just have HIT vs nothing
+
+
+	if ( function_exists( 'ob_gzhandler' ) && ! empty( $GLOBALS['mc_config']['enable_gzip_compression'] ) ) {
+		return ob_gzhandler( $buffer, $flags );
+	} else {
+		return $buffer;
+	}
 }
 
 /**
@@ -32,7 +139,7 @@ function mc_load_logged_in_cache(){
  */
 function mc_cache_flush() {
 
-	mc_rrmdir( SC_CACHE_DIR );
+	mc_rrmdir( MC_CACHE_DIR );
 
 	if ( function_exists( 'wp_cache_flush' ) ) {
 		wp_cache_flush();
@@ -50,11 +157,9 @@ function mc_cache_purge($url) {
 
 	$url_path = mc_get_url_path($url);
 
-    $is_api = strpos($url_path, 'wp-json/') === 0;
-    $ext = $is_api ? '.json' : '.html';
-    $cache_file = $url_path . $ext;
-    $gzip_file = $url_path . ".gzip" . $ext;
-    $header_file = $url_path . ".headers.json";
+    $cache_file = $url_path;
+    $gzip_file = $url_path . ".gzip";
+    $header_file = $url_path . ".json";
     if (file_exists($cache_file)) {
         unlink($cache_file);
     }
@@ -108,18 +213,18 @@ function mc_verify_file_access() {
 	}
 
 	// Make sure cache directory or parent is writeable
-	if ( file_exists( SC_CACHE_DIR ) ) {
-		if ( ! @is_writable( SC_CACHE_DIR ) ) {
+	if ( file_exists( MC_CACHE_DIR ) ) {
+		if ( ! @is_writable( MC_CACHE_DIR ) ) {
 			$errors[] = 'cache';
 		}
 	} else {
-		if ( file_exists( dirname( SC_CACHE_DIR ) ) ) {
-			if ( ! @is_writable( dirname( SC_CACHE_DIR ) ) ) {
+		if ( file_exists( dirname( MC_CACHE_DIR ) ) ) {
+			if ( ! @is_writable( dirname( MC_CACHE_DIR ) ) ) {
 				$errors[] = 'cache';
 			}
 		} else {
-			if ( file_exists( dirname( dirname( SC_CACHE_DIR ) ) ) ) {
-				if ( ! @is_writable( dirname( dirname( SC_CACHE_DIR ) ) ) ) {
+			if ( file_exists( dirname( dirname( MC_CACHE_DIR ) ) ) ) {
+				if ( ! @is_writable( dirname( dirname( MC_CACHE_DIR ) ) ) ) {
 					$errors[] = 'cache';
 				}
 			} else {

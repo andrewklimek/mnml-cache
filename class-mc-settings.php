@@ -8,7 +8,7 @@ defined( 'ABSPATH' ) || exit;
 /**
 * Class containing settings hooks
 */
-class SC_Settings {
+class MC_Settings {
 	
 	/**
 	* Setup the plugin
@@ -29,12 +29,12 @@ class SC_Settings {
 		$main = [
 			'enable_caching' => [],
 			'private_cache' => [],
-			'enable_gzip_compression' => [ 'callback' => 'SC_Settings::settings_enable_gzip_compression' ],
+			'enable_gzip_compression' => [ 'callback' => 'MC_Settings::settings_enable_gzip_compression' ],
+			'enable_json_cache' => [],
+			'restore_headers' => [ 'desc' => 'When enabled, the plugin will save the response headers present when the page is cached and it will send send them again when it serves the cached page. This is recommended when caching the REST API.'],
+			'enable_url_exemption_regex' => [],
 			'cache_exception_urls' => [ 'type' => 'code' ],
 			'cache_only_urls' => [ 'type' => 'code' ],
-			'enable_url_exemption_regex' => [],
-			'page_cache_enable_rest_api_cache' => [],
-			'page_cache_restore_headers' => [ 'desc' => 'When enabled, the plugin will save the response headers present when the page is cached and it will send send them again when it serves the cached page. This is recommended when caching the REST API.'],
 		];
 
 		return $main;
@@ -50,7 +50,7 @@ class SC_Settings {
 		/**
 		*  Build Settings Page using framework in settings_page.php
 		**/
-		$values = SC_Config::factory()->get();
+		$values = MC_Config::factory()->get();
 		$title = "Mnml Cache";
 		require( __DIR__.'/settings-page.php' );// needs $options, $endpoint, $title
 		
@@ -157,7 +157,7 @@ class SC_Settings {
 			delete_option( 'mc_cant_write' );
 		}
 		
-		$config = SC_Config::factory()->get();
+		$config = MC_Config::factory()->get();
 
 		// so this runs for various actions besides updating settings... I assume this will never be present durong such times?
 		if ( !empty( $_REQUEST['mnml_cache'] ) ) {
@@ -167,17 +167,17 @@ class SC_Settings {
 			// Back up configration in options.
 			update_option( 'mnml_cache', $config );
 			
-			SC_Config::factory()->write( $config );
+			MC_Config::factory()->write( $config );
 		}
 		
 		
 		require_once __DIR__ . '/class-mc-cache.php';
 		
 		if ( $config['enable_caching'] ) {
-			SC_Advanced_Cache::factory()->write();
-			SC_Advanced_Cache::factory()->toggle_caching( true );
+			MC_Advanced_Cache::factory()->write();
+			MC_Advanced_Cache::factory()->toggle_caching( true );
 		} else {
-			SC_Advanced_Cache::factory()->toggle_caching( false );
+			MC_Advanced_Cache::factory()->toggle_caching( false );
 		}
 		
 		if ( ! empty( $_REQUEST['url'] ) ) {

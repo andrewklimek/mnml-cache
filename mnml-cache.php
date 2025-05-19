@@ -14,19 +14,19 @@ Domain Path: /languages
 
 defined( 'ABSPATH' ) || exit;
 
-require_once __DIR__ . '/pre-wp-functions.php';
+require_once __DIR__ . '/serve.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/class-mc-notices.php';
 require_once __DIR__ . '/class-mc-settings.php';
 require_once __DIR__ . '/class-mc-config.php';
 require_once __DIR__ . '/cloudflare.php';
-SC_Notices::factory();
-SC_Settings::factory();
-$config = SC_Config::factory()->get();
+MC_Notices::factory();
+MC_Settings::factory();
+$config = MC_Config::factory()->get();
 
 if ( ! empty( $config['enable_caching'] ) ) {
 	require_once __DIR__ . '/class-mc-cache.php';
-	SC_Advanced_Cache::factory();
+	MC_Advanced_Cache::factory();
 }
 
 /**
@@ -52,9 +52,9 @@ add_filter( 'plugin_action_links', 'mc_filter_plugin_action_links', 10, 2 );
  */
 function mc_deactivate() {
 	mc_cache_flush();
-	SC_Advanced_Cache::factory()->clean_up();
-	SC_Advanced_Cache::factory()->toggle_caching( false );
-	SC_Config::factory()->clean_up();
+	MC_Advanced_Cache::factory()->clean_up();
+	MC_Advanced_Cache::factory()->toggle_caching( false );
+	MC_Config::factory()->clean_up();
 }
 add_action( 'deactivate_' . plugin_basename( __FILE__ ), 'mc_deactivate' );
 
@@ -67,9 +67,9 @@ add_action( 'deactivate_' . plugin_basename( __FILE__ ), 'mc_deactivate' );
  *  or even trigger that uninstall function
  */
 function mc_uninstall() {
-	// SC_Advanced_Cache::factory()->clean_up();
-	// SC_Advanced_Cache::factory()->toggle_caching( false );
-	SC_Config::factory()->clean_up();
+	// MC_Advanced_Cache::factory()->clean_up();
+	// MC_Advanced_Cache::factory()->toggle_caching( false );
+	MC_Config::factory()->clean_up();
 	mc_cache_flush();
 }
 // register_uninstall_hook( __FILE__, 'mc_uninstall' );
@@ -78,6 +78,6 @@ function mc_uninstall() {
  * Create config file
  */
 function mc_activate() {
-	SC_Config::factory()->write( array() );
+	MC_Config::factory()->write( array() );
 }
 add_action( 'activate_' . plugin_basename( __FILE__ ), 'mc_activate' );
