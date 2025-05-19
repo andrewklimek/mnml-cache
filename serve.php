@@ -72,15 +72,10 @@ function mnmlcache_main(){
 		}
 	}
 
-	// Is this available so early?  Currently using URL exceptions for this (would want to pre-populate these I guess)
-	if (function_exists('is_woocommerce') && (is_cart() || is_checkout())) {
-		// header('Cache-Control: no-cache, no-store, must-revalidate');
-		return;
-	}
-
 	// exceptions
+	// people may want to add /cart/ or /checkout/ but those two are also handled in mc_file_cache() when the woo conditionals are available
 	if ( ! empty( $GLOBALS['mc_config']['cache_only_urls'] ) ) {
-		$exceptions = preg_split( '<[\r\n]>', $GLOBALS['mc_config']['cache_only_urls'], 0, PREG_SPLIT_NO_EMPTY );
+		$exceptions = explode( "\n", $GLOBALS['mc_config']['cache_only_urls'] );
 
 		$regex = ! empty( $GLOBALS['mc_config']['enable_url_exemption_regex'] );
 		$matched = false;
@@ -96,13 +91,13 @@ function mnmlcache_main(){
 		}
 	}
 	elseif ( ! empty( $GLOBALS['mc_config']['cache_exception_urls'] ) ) {
-		$exceptions = preg_split( '<[\r\n]>', $GLOBALS['mc_config']['cache_exception_urls'], 0, PREG_SPLIT_NO_EMPTY );
+		$exceptions = explode( "\n", $GLOBALS['mc_config']['cache_exception_urls'] );
 
 		$regex = ! empty( $GLOBALS['mc_config']['enable_url_exemption_regex'] );
 
 		foreach ( $exceptions as $exception ) {
 			if ( mc_url_exception_match( $exception, $regex ) ) {
-				// error_log("skipping exception $exception");
+				error_log("skipping exception $exception");
 				return;
 			}
 		}
@@ -153,6 +148,7 @@ function mc_serve_file_cache() {
 		// header( $_SERVER['SERVER_PROTOCOL'] . ' 304 Not Modified', true, 304 );
 		http_response_code( 304 );
 		header( 'Cache-Control: max-age=' . HOUR_IN_SECONDS );// Why?
+		header( 'X-Mnml-Cache: HIT' );
 		exit;
 	}
 

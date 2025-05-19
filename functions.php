@@ -61,6 +61,13 @@ function mc_file_cache( $buffer, $flags ) {
 		return $buffer;
 	}
 
+	if (function_exists('is_woocommerce') && (is_cart() || is_checkout())) {
+		// error_log('is_cart');
+		header( 'X-Mnml-Cache: BYPASSING WOO!' );
+		// header('Cache-Control: no-cache, no-store, must-revalidate');
+		return $buffer;
+	}
+
 	// exclude authenticaed api calls but might not always be JSON
 	if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
 		return $buffer;
