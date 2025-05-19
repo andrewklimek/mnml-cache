@@ -79,7 +79,7 @@ class MC_Config {
 	 */
 	public function get() {
 
-		$config = get_option( 'mnml_cache', $this->get_defaults() );
+		$config = get_option( 'mnmlcache', $this->get_defaults() );
 
 		return wp_parse_args( $config, $this->get_defaults() );
 	}
@@ -91,7 +91,7 @@ class MC_Config {
 	 */
 	public function clean_up() {
 
-		delete_option( 'mnml_cache' );
+		delete_option( 'mnmlcache' );
 
 		if ( ! @unlink( WP_CONTENT_DIR . '/mnml-cache-config.php' ) ) {
 			return false;

@@ -45,14 +45,15 @@ class MC_Settings {
 	*/
 	public function settings_page() {
 
-		$options = [ 'mnml_cache' => self::get_options() ];
+		$options = [ 'mnmlcache' => self::get_options() ];
+		$options['mnmlcache_'] = [ 'cloudflare_api_token' => [ 'type' => 'text' ] ];
 		
 		/**
 		*  Build Settings Page using framework in settings_page.php
 		**/
 		$values = MC_Config::factory()->get();
 		$title = "Mnml Cache";
-		require( __DIR__.'/settings-page.php' );// needs $options, $endpoint, $title
+		require( __DIR__.'/settings-framework.php' );
 		
 	}
 
@@ -137,6 +138,7 @@ class MC_Settings {
 	public function update() {
 
 		// var_export( $_REQUEST);
+		// exit;
 					
 		if ( empty( $_REQUEST['action'] ) || 'mc_update' !== $_REQUEST['action'] ) return;
 		
@@ -159,17 +161,17 @@ class MC_Settings {
 		
 		$config = MC_Config::factory()->get();
 
-		// so this runs for various actions besides updating settings... I assume this will never be present durong such times?
-		if ( !empty( $_REQUEST['mnml_cache'] ) ) {
+		$options = $_REQUEST['options'] ?? [];
 
-			$config = array_map( 'htmlspecialchars', $_REQUEST['mnml_cache'] );
-			
-			// Back up configration in options.
-			update_option( 'mnml_cache', $config );
-			
-			MC_Config::factory()->write( $config );
+		foreach( $options as $option => $value ) {
+
+			if ( $option === 'mnmlcache' ) {
+				$value = array_map( 'htmlspecialchars', $value );
+				$config = $value;
+				MC_Config::factory()->write( $config );
+			}
+			update_option( $option, $value );
 		}
-		
 		
 		require_once __DIR__ . '/class-mc-cache.php';
 		

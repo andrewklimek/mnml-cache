@@ -46,7 +46,7 @@ class MC_Notices {
 		<div class="notice notice-warning">
 			<p>
 				<?php esc_html_e( "mnml cache won't work until you turn it on.", 'mnml-cache' ); ?>
-				<a href="options-general.php?page=mnml-cache&amp;url=<?php echo esc_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ); ?>&amp;action=mc_update&amp;mc_settings_nonce=<?php echo esc_attr( wp_create_nonce( 'mc_update_settings' ) ); ?>&amp;mnml_cache[enable_caching]=1" class="button button-primary" style="margin-left: 5px;"><?php esc_html_e( 'Turn On Caching', 'mnml-cache' ); ?></a>
+				<a href="options-general.php?page=mnml-cache&amp;url=<?php echo esc_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ); ?>&amp;action=mc_update&amp;mc_settings_nonce=<?php echo esc_attr( wp_create_nonce( 'mc_update_settings' ) ); ?>&amp;mnmlcache[enable_caching]=1" class="button button-primary" style="margin-left: 5px;"><?php esc_html_e( 'Turn On Caching', 'mnml-cache' ); ?></a>
 			</p>
 		</div>
 		<?php

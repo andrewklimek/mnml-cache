@@ -40,11 +40,13 @@ function mnmlcache_main(){
 					$max_age = $GLOBALS['mc_config']['browser_cache_max_age'] ?? 3600;
 					// header("Cache-Control: private, max-age=$max_age");
 					// header('Vary: Cookie');
-					add_filter('nocache_headers', function() use ( $max_age ){ return [
-						'Cache-Control' => "private, max-age=$max_age",
-						'Vary' => 'Cookie',
-					]; });
-					add_action('shutdown', function(){ error_log(var_export(headers_list(),1)); });
+					add_filter('nocache_headers', function() use ( $max_age ){// TODO this might want some conditional tags. check in what places nocache_headers is used
+						return [
+							'Cache-Control' => "private, max-age=$max_age",
+							'Vary' => 'Cookie',
+						];
+					});
+					// add_action('shutdown', function(){ error_log(var_export(headers_list(),1)); });
 				}
 				return;
 			}
@@ -110,8 +112,9 @@ function mnmlcache_main(){
 	// error_log('ob_start');
 
 	// OK we didn't have the file cached, time to load the other functions and let WP generate the page.
-	remove_action( 'template_redirect', 'rest_output_link_header', 11 );
-	remove_action( 'template_redirect', 'wp_shortlink_header', 11 );
+	// This is too soon to remove these actions... TODO
+	// remove_action( 'template_redirect', 'rest_output_link_header', 11 );
+	// remove_action( 'template_redirect', 'wp_shortlink_header', 11 );
 
 	require_once __DIR__ . '/functions.php';
 	ob_start( 'mc_file_cache' );

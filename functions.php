@@ -81,7 +81,7 @@ function mc_file_cache( $buffer, $flags ) {
 		// if ( substr( $header, 0, 2 ) === 'X-' ) continue;
 		$headers[] = $header;
 	}
-	error_log(var_export($headers,1));
+	error_log('mc_file_cache ' . var_export($headers,1));
 
 
 	// Make sure we can read/write files to cache dir parent
