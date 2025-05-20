@@ -6,7 +6,11 @@ defined( 'ABSPATH' ) || exit;
 
 defined( 'MC_CACHE_DIR' ) || define( 'MC_CACHE_DIR', WP_CONTENT_DIR . '/cache/mnml-cache' );
 
-mnmlcache_main();
+function mnmlcache_debug( $content ) {
+	if ( !is_string ( $content ) ) $content = var_export( $content, true );
+	error_log( $content . "\n", 3, __DIR__ . '/_debug.log' );
+}
+
 
 function mnmlcache_main(){
 	// https://github.com/Automattic/wp-super-cache/blob/88fc6d2b2b3800a34b42230b6b6796a2e6a9d95d/wp-cache-phase2.php#L1575
@@ -40,13 +44,35 @@ function mnmlcache_main(){
 					$max_age = $GLOBALS['mc_config']['browser_cache_max_age'] ?? 3600;
 					// header("Cache-Control: private, max-age=$max_age");
 					// header('Vary: Cookie');
-					add_filter('nocache_headers', function() use ( $max_age ){// TODO this might want some conditional tags. check in what places nocache_headers is used
-						return [
-							'Cache-Control' => "private, max-age=$max_age",
-							'Vary' => 'Cookie',
-						];
-					});
-					// add_action('shutdown', function(){ error_log(var_export(headers_list(),1)); });
+					// add_filter('nocache_headers', function() use ( $max_age ){// TODO this might want some conditional tags. check in what places nocache_headers is used
+					// 	return [
+					// 		'Cache-Control' => "private, max-age=$max_age",
+					// 		'Vary' => 'Cookie',
+					// 	];
+					// });
+					add_filter( 'wp_headers', function( $headers, $wp ) use ( $max_age ) {
+						
+						// mnmlcache_debug("did_filter(nocache_headers): " . did_filter('nocache_headers') );// returns 2 for password protected, 1 for anythign WP added these to
+						mnmlcache_debug($_SERVER['REQUEST_URI']);
+						mnmlcache_debug($headers);
+						
+						// this applies to previews....
+
+						// it affects password protected posts, but testing i think youc an review them anyway once you put the password in once. and logging out seemed to work... is that from the vary cookies?
+
+						// This does affect Woo Cart, but they have a safety hook on 'wp' to set no-store again...
+						// https://github.com/woocommerce/woocommerce/blob/0d01426dca020bde95275f90002c4f412709269a/plugins/woocommerce/includes/class-wc-cache-helper.php#L149
+						// See https://github.com/woocommerce/woocommerce/blob/0d01426dca020bde95275f90002c4f412709269a/plugins/woocommerce/includes/class-wc-cache-helper.php#L46
+						if ( isset( $headers['Cache-Control'] ) && strpos( $headers['Cache-Control'], 'no-store' ) ) {
+							$headers['Cache-Control'] = "private, max-age=$max_age";
+							$headers['Vary'] = "Cookie";
+							unset( $headers['Expires']);
+						}
+						mnmlcache_debug($headers);
+
+						return $headers;
+					}, 2, 10 );
+					// add_action('shutdown', function(){ mnmlcache_debug(var_export(headers_list(),1)); });
 				}
 				return;
 			}
@@ -67,7 +93,7 @@ function mnmlcache_main(){
 	if ( strpos( $_SERVER['REQUEST_URI'], '.' ) && strpos( $_SERVER['REQUEST_URI'], 'index.php' ) === false ) {
 		$file_extension = array_reverse( explode('.', explode('?', $_SERVER['REQUEST_URI'] )[0] ) )[0];
 		if ( in_array( $file_extension, [ 'php', 'xml', 'xsl' ] ) ) {
-			error_log( "skipping due to extension: " . $_SERVER['REQUEST_URI'] );
+			mnmlcache_debug( "skipping due to extension: " . $_SERVER['REQUEST_URI'] );
 			return;
 		}
 	}
@@ -86,7 +112,7 @@ function mnmlcache_main(){
 			}
 		}
 		if ( ! $matched ) {
-			// error_log("skipping because not in the 'only cache' setting: " . $_SERVER['REQUEST_URI'] );
+			// mnmlcache_debug("skipping because not in the 'only cache' setting: " . $_SERVER['REQUEST_URI'] );
 			return;
 		}
 	}
@@ -97,14 +123,14 @@ function mnmlcache_main(){
 
 		foreach ( $exceptions as $exception ) {
 			if ( mc_url_exception_match( $exception, $regex ) ) {
-				error_log("skipping exception $exception");
+				mnmlcache_debug("skipping exception $exception");
 				return;
 			}
 		}
 	}
 
 	mc_serve_file_cache();
-	// error_log('ob_start');
+	// mnmlcache_debug('ob_start');
 
 	// OK we didn't have the file cached, time to load the other functions and let WP generate the page.
 	// This is too soon to remove these actions... TODO
@@ -113,6 +139,9 @@ function mnmlcache_main(){
 
 	require_once __DIR__ . '/functions.php';
 	ob_start( 'mc_file_cache' );
+	add_action('send_headers', function(){
+		mnmlcache_debug('send_headers buffer: ' . ob_get_contents() );
+	});
 }
 
 /**

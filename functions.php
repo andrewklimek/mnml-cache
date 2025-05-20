@@ -3,13 +3,12 @@
  * Utility functions for plugin
  */
 
-
-// add_action('shutdown', function(){ error_log( "shutdown connection_status: " . connection_status());});
+// add_action('shutdown', function(){ mnmlcache_debug( "shutdown connection_status: " . connection_status());});
 
 // add_action( 'wp_footer', 'mc_flag_page_done', 99999999 );
 // function mc_flag_page_done() {
 	// defined( 'MC_FLAG_PAGE_DONE' ) || define( 'MC_FLAG_PAGE_DONE', TRUE );
-	// error_log('flag page finished loading ' . $_SERVER['REQUEST_URI']);
+	// mnmlcache_debug('flag page finished loading ' . $_SERVER['REQUEST_URI']);
 // }
 
 /**
@@ -23,34 +22,36 @@ function mc_file_cache( $buffer, $flags ) {
 
 	// https://github.com/Automattic/wp-super-cache/blob/88fc6d2b2b3800a34b42230b6b6796a2e6a9d95d/wp-cache-phase2.php#L2069
 
-	// if ( ! defined( 'MC_FLAG_PAGE_DONE' ) || ! MC_FLAG_PAGE_DONE ) {
-	// 	error_log('page didnt finish loading ' . $_SERVER['REQUEST_URI']);
-	// 	return $buffer;
-	// }
+	if ( ! did_filter('wp_headers') ) {
+		mnmlcache_debug("wp_headers didn't run so this shouldn't be cached!");
+		// return $buffer;
+	}
 
 	// why do they have these 2 hooks to "catch" the code? https://github.com/Automattic/wp-super-cache/blob/88fc6d2b2b3800a34b42230b6b6796a2e6a9d95d/wp-cache-phase2.php#L1566
 	if ( http_response_code() !== 200 ) {
+		mnmlcache_debug("Non-200 HTTP response code: " . http_response_code());
 		return $buffer;
 	}
 
 	$error = error_get_last();
 	if ( $error && ( $error['type'] & ( E_ERROR | E_CORE_ERROR | E_PARSE | E_COMPILE_ERROR | E_USER_ERROR ) ) ) {
+		mnmlcache_debug("Fatal error detected: " . json_encode($error));
 		return $buffer;
 	}
 
 	if ( defined( 'MNML_DONTCACHE' ) && MNML_DONTCACHE ) {
+		mnmlcache_debug("MNML_DONTCACHE is defined and true");
         return $buffer;
     }
 
-	// error_log( "buffer connection_status: " . connection_status());
-
 	// safety to really not cache logged in pages incase the pre-wp check is somehow faulty
 	if ( is_user_logged_in() ) {
-		error_log("!!! WOULD HAVE CACHED A LOGGED IN USER !!!");
+		mnmlcache_debug("!!! WOULD HAVE CACHED A LOGGED IN USER !!!");
 		return $buffer;
 	}
 
 	if ( isset( $_GET['preview'] ) ) {
+		mnmlcache_debug("Preview mode detected");
 		return $buffer;
 	}
 	
@@ -58,23 +59,25 @@ function mc_file_cache( $buffer, $flags ) {
 	// Don't cache search, 404, or password protected... TODO arent these handled before somewhere?
 	global $post;
 	if ( is_404() || is_search() || ! empty( $post->post_password ) ) {
+		mnmlcache_debug("Page is 404, search, or password protected");
 		return $buffer;
 	}
 
 	if (function_exists('is_woocommerce') && (is_cart() || is_checkout())) {
-		// error_log('is_cart');
+		mnmlcache_debug('Bypassing WooCommerce cart or checkout');
 		header( 'X-Mnml-Cache: BYPASSING WOO!' );
-		// header('Cache-Control: no-cache, no-store, must-revalidate');
 		return $buffer;
 	}
 
 	// exclude authenticaed api calls but might not always be JSON
 	if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
+		mnmlcache_debug("Authenticated API call detected");
 		return $buffer;
 	}
 
 	// Do not cache the REST API if the user has not opted-in or it's an authenticated REST API request.
 	if ( defined( 'REST_REQUEST' ) && REST_REQUEST && empty( $GLOBALS['mc_config']['enable_json_cache'] ) ) {
+		mnmlcache_debug("REST API request without JSON cache enabled");
 		return $buffer;
 	}
 
@@ -83,21 +86,23 @@ function mc_file_cache( $buffer, $flags ) {
 	header_remove('X-Powered-By');
 	foreach ( headers_list() as $header ) {
 		if ( empty( $GLOBALS['mc_config']['enable_json_cache'] ) && stripos( $header, 'Content-Type: application/json' ) === 0 ) {
+			mnmlcache_debug("JSON content type detected without JSON cache enabled");
 			return $buffer;
 		}
 		// if ( substr( $header, 0, 2 ) === 'X-' ) continue;
 		$headers[] = $header;
 	}
-	error_log('mc_file_cache ' . var_export($headers,1));
-
+	// mnmlcache_debug('mc_file_cache ' . var_export($headers,1));
 
 	// Make sure we can read/write files to cache dir parent
 	if ( ! file_exists( dirname( MC_CACHE_DIR ) ) && ! @mkdir( dirname( MC_CACHE_DIR ) ) ) {
+		mnmlcache_debug("Cannot create or access parent cache directory: " . dirname(MC_CACHE_DIR));
 		return $buffer;
 	}
 
 	// Make sure we can read/write files to cache dir
 	if ( ! file_exists( MC_CACHE_DIR ) && ! @mkdir( MC_CACHE_DIR ) ) {
+		mnmlcache_debug("Cannot create or access cache directory: " . MC_CACHE_DIR);
 		return $buffer;
 	}
 
@@ -109,6 +114,7 @@ function mc_file_cache( $buffer, $flags ) {
 	foreach ( $dirs as $dir ) {
 		$dir_path .= '/' . $dir;
 		if ( ! file_exists( $dir_path ) && ! @mkdir( $dir_path ) ) {
+			mnmlcache_debug("Cannot create directory in cache path: " . $dir_path);
 			return $buffer;
 		}
 	}
@@ -124,7 +130,6 @@ function mc_file_cache( $buffer, $flags ) {
 		file_put_contents( $path . '.json', json_encode( $headers, JSON_UNESCAPED_SLASHES ) );
 	}
 
-
 	header( 'Last-Modified: ' . gmdate( 'D, d M Y H:i:s' ) . ' GMT' );
 
 	// TODO why either one of these?
@@ -132,7 +137,6 @@ function mc_file_cache( $buffer, $flags ) {
 	header( 'Cache-Control: max-age=' . HOUR_IN_SECONDS );
 
 	// header( 'X-Mnml-Cache: MISS' );// this ends up shoing on CDN results if they are the first to serve the file.  Better to just have HIT vs nothing
-
 
 	if ( function_exists( 'ob_gzhandler' ) && ! empty( $GLOBALS['mc_config']['enable_gzip_compression'] ) ) {
 		return ob_gzhandler( $buffer, $flags );
@@ -177,7 +181,7 @@ function mc_cache_purge($url) {
         unlink($header_file);
     }
     if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log("mnml cache: Purged cache for URL: $url");
+        mnmlcache_debug("mnml cache: Purged cache for URL: $url");
     }
 	mnmlcache_cloudflare_purge_urls([$url]);
 }
@@ -301,7 +305,7 @@ function mc_crawl() {
 	if (empty($sitemap_urls)) {
 		// Fallback to default sitemap
 		$sitemap_urls = [ "$base_url/wp-sitemap.xml", "$base_url/sitemap.xml", "$base_url/sitemaps.xml" ];
-		error_log("No sitemap found in robots.txt, trying defaults.");
+		mnmlcache_debug("No sitemap found in robots.txt, trying defaults.");
 	}
 
 	$all_urls = [];
@@ -312,11 +316,11 @@ function mc_crawl() {
 
 	$all_urls = array_unique($all_urls);// Remove duplicates
 	if (!empty($all_urls)) {
-		error_log("Crawling " . count($all_urls) . " URLs...");
+		mnmlcache_debug("Crawling " . count($all_urls) . " URLs...");
 		crawl_urls($all_urls);
-		error_log("Done!");
+		mnmlcache_debug("Done!");
 	} else {
-		error_log("No URLs found in sitemap(s).");
+		mnmlcache_debug("No URLs found in sitemap(s).");
 	}
 }
 
@@ -329,7 +333,7 @@ function get_sitemap_urls_from_robots($base_url) {
     if (function_exists('wp_remote_get')) {
         $response = wp_remote_get($robots_url, ['timeout' => 10]);
         if (is_wp_error($response)) {
-            error_log("Failed to fetch robots.txt: $robots_url - " . $response->get_error_message());
+            mnmlcache_debug("Failed to fetch robots.txt: $robots_url - " . $response->get_error_message());
             return $sitemap_urls;
         }
         $body = wp_remote_retrieve_body($response);
@@ -348,9 +352,9 @@ function get_sitemap_urls_from_robots($base_url) {
     }
 
     if (empty($sitemap_urls)) {
-        error_log("No sitemap URLs found in robots.txt: $robots_url");
+        mnmlcache_debug("No sitemap URLs found in robots.txt: $robots_url");
     } else {
-		error_log("Got sitemaps from robots.txt: " . var_export( $sitemap_urls, 1 ) );
+		mnmlcache_debug("Got sitemaps from robots.txt: " . var_export( $sitemap_urls, 1 ) );
 	}
 
     return $sitemap_urls;
@@ -363,7 +367,7 @@ function get_urls_from_sitemap($sitemap_url) {
     // Fetch the sitemap
 	$response = wp_remote_get($sitemap_url, ['timeout' => 10]);
 	if (is_wp_error($response)) {
-		error_log("Failed to fetch sitemap: $sitemap_url - " . $response->get_error_message());
+		mnmlcache_debug("Failed to fetch sitemap: $sitemap_url - " . $response->get_error_message());
 		return $urls;
 	}
 	$body = wp_remote_retrieve_body($response);
@@ -371,7 +375,7 @@ function get_urls_from_sitemap($sitemap_url) {
     // Parse XML
     $xml = simplexml_load_string($body);
     if ($xml === false) {
-        error_log("Failed to parse sitemap XML: $sitemap_url");
+        mnmlcache_debug("Failed to parse sitemap XML: $sitemap_url");
         return $urls;
     }
 
@@ -398,15 +402,15 @@ function crawl_urls($urls) {
         try {
 			$response = wp_remote_get($url, ['timeout' => 10, 'headers' => $headers, 'blocking' => false]);
 			if (is_wp_error($response)) {
-				error_log("Error fetching $url: " . $response->get_error_message());
+				mnmlcache_debug("Error fetching $url: " . $response->get_error_message());
 				continue;
 			}
 			$status = wp_remote_retrieve_response_code($response);
             
-            error_log("[{$index}/" . count($urls) . "] $url: $status");
+            mnmlcache_debug("[{$index}/" . count($urls) . "] $url: $status");
             sleep(1); // Avoid overwhelming the server
         } catch (Exception $e) {
-            error_log("Error fetching $url: " . $e->getMessage());
+            mnmlcache_debug("Error fetching $url: " . $e->getMessage());
         }
     }
 }
