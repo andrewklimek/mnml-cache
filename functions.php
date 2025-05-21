@@ -20,6 +20,17 @@
  */
 function mc_file_cache( $buffer, $flags ) {
 
+	$headers = headers_list();
+    foreach ($headers as $header) {
+        if (stripos($header, 'Cache-Control:') === 0) {
+            $cacheControl = trim(substr($header, strlen('Cache-Control:'), 0));
+            $directives = array_map('trim', explode(',', $cacheControl));
+            if ( in_array('no-store', $directives) || in_array('private', $directives) ) {
+				mnmlcache_debug("header had no-store or private");
+			}
+        }
+    }
+
 	// https://github.com/Automattic/wp-super-cache/blob/88fc6d2b2b3800a34b42230b6b6796a2e6a9d95d/wp-cache-phase2.php#L2069
 
 	if ( ! did_filter('wp_headers') ) {
