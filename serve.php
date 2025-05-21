@@ -20,8 +20,31 @@ function mnmlcache_main(){
 		return;
 	}
 
-	// this is modtly redundant, since I check is_admin in advanced-cache.php and check for .php files below, but this is how wp-super-cache does it. I need the CLI thing at least
-	if ( mc_is_backend() ) {
+	$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+	$path = parse_url($requestUri, PHP_URL_PATH) ?: ''; // Extract path, discard query string
+    // $path = basename($requestUri);
+	// Early exit for any file with an extension
+    if (strpos($path, '.') !== false) {
+		mnmlcache_debug('skip, file detected based on dot: ' . $path);
+        return;// Covers robots.txt, favicon.ico, wp-login.php, xmlrpc.php, wp-cron.php, .xml, bull that bots are probing for
+    }
+
+	// https://github.com/Automattic/wp-super-cache/blob/88fc6d2b2b3800a34b42230b6b6796a2e6a9d95d/wp-cache-phase2.php#L790
+	if ( defined( 'DOING_CRON' ) && DOING_CRON ) {
+		mnmlcache_debug('skipping: doing cron');
+		return;
+	}
+	if ( PHP_SAPI == 'cli' || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+		mnmlcache_debug('skipping: wp-cli');
+		return;
+	}
+
+	// mnmlcache_debug('mnmlcache_main - ' . $_SERVER['REQUEST_URI'] );
+	// mnmlcache_debug(headers_list());
+
+		// customizer, apparantly.  Don't we check this before saving buffer with "is_preview" ?
+	if ( isset( $_GET['customize_changeset_uuid'] ) ) {
+		mnmlcache_debug('skipping: customizer');
 		return;
 	}
 
@@ -37,6 +60,7 @@ function mnmlcache_main(){
 	if ( ! empty( $_COOKIE ) ) {
 		foreach (array_keys($_COOKIE) as $key) {
 			if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
+				mnmlcache_debug('logged in');
 				if ( !empty( $GLOBALS['mc_config']['private_cache'] ) ) {
 					// set cache control
 					// $nonce_life = apply_filters('nonce_life', DAY_IN_SECONDS);// maybe show this value in settings UI and let them know what to do if its short.
@@ -52,9 +76,9 @@ function mnmlcache_main(){
 					// });
 					add_filter( 'wp_headers', function( $headers, $wp ) use ( $max_age ) {
 						
-						// mnmlcache_debug("did_filter(nocache_headers): " . did_filter('nocache_headers') );// returns 2 for password protected, 1 for anythign WP added these to
-						mnmlcache_debug($_SERVER['REQUEST_URI']);
-						mnmlcache_debug($headers);
+						mnmlcache_debug("did_filter(nocache_headers): " . did_filter('nocache_headers') );// returns 2 for password protected, 1 for anythign WP added these to
+						// mnmlcache_debug($_SERVER['REQUEST_URI']);
+						// mnmlcache_debug($headers);
 						
 						// this applies to previews....
 
@@ -63,7 +87,7 @@ function mnmlcache_main(){
 						// This does affect Woo Cart, but they have a safety hook on 'wp' to set no-store again...
 						// https://github.com/woocommerce/woocommerce/blob/0d01426dca020bde95275f90002c4f412709269a/plugins/woocommerce/includes/class-wc-cache-helper.php#L149
 						// See https://github.com/woocommerce/woocommerce/blob/0d01426dca020bde95275f90002c4f412709269a/plugins/woocommerce/includes/class-wc-cache-helper.php#L46
-						if ( isset( $headers['Cache-Control'] ) && strpos( $headers['Cache-Control'], 'no-store' ) ) {
+						if ( isset( $headers['Cache-Control'] ) && false !== strpos( $headers['Cache-Control'], 'no-cache' ) ) {
 							$headers['Cache-Control'] = "private, max-age=$max_age";
 							$headers['Vary'] = "Cookie";
 							unset( $headers['Expires']);
@@ -71,23 +95,17 @@ function mnmlcache_main(){
 						mnmlcache_debug($headers);
 
 						return $headers;
-					}, 2, 10 );
-					// add_action('shutdown', function(){ mnmlcache_debug(var_export(headers_list(),1)); });
+					}, 2, 100 );
+					add_action('shutdown', function(){
+						mnmlcache_debug('headers at shutdown: ' . var_export(headers_list(),1));
+						mnmlcache_debug("did_filter(nocache_headers): " . did_filter('nocache_headers') );// returns 2 for password protected, 1 for anythign WP added these to
+					});
 				}
 				return;
 			}
 		}
 	}
 
-	// Don't cache robots.txt or htacesss (TODO what is the point of this?)
-	if ( strpos( $_SERVER['REQUEST_URI'], 'robots.txt' ) !== false || strpos( $_SERVER['REQUEST_URI'], '.htaccess' ) !== false ) {
-		return;
-	}
-
-	// customizer, apparantly.  Don't we check this before saving buffer with "is_preview" ?
-	if ( isset( $_GET['customize_changeset_uuid'] ) ) { 
-		return;
-	}
 
 	// Don't cache disallowed extensions. Prevents wp-cron.php, xmlrpc.php, etc. @TODO
 	if ( strpos( $_SERVER['REQUEST_URI'], '.' ) && strpos( $_SERVER['REQUEST_URI'], 'index.php' ) === false ) {
@@ -140,7 +158,10 @@ function mnmlcache_main(){
 	require_once __DIR__ . '/functions.php';
 	ob_start( 'mc_file_cache' );
 	add_action('send_headers', function(){
-		mnmlcache_debug('send_headers buffer: ' . ob_get_contents() );
+		$ob = ob_get_contents();
+		if ( '' !== $ob ) {
+			mnmlcache_debug('!!! buffer was NOT empty at send_headers on '. $_SERVER['REQUEST_URI'] .'.  Buffer: ' . var_export($ob,1) );
+		}
 	});
 }
 
@@ -289,33 +310,3 @@ function mc_url_exception_match( $rule, $regex = false ) {
 
 }
 
-/**
- * 
- * https://github.com/Automattic/wp-super-cache/blob/88fc6d2b2b3800a34b42230b6b6796a2e6a9d95d/wp-cache-phase2.php#L790
- */
-
-function mc_is_backend() {
-	static $is_backend;
-
-	if ( isset( $is_backend ) ) {
-		return $is_backend;
-	}
-
-	$is_backend = is_admin();
-	if ( $is_backend ) {
-		return $is_backend;
-	}
-
-	$script = isset( $_SERVER['PHP_SELF'] ) ? basename( $_SERVER['PHP_SELF'] ) : '';
-	if ( $script !== 'index.php' ) {
-		if ( in_array( $script, array( 'wp-login.php', 'xmlrpc.php', 'wp-cron.php' ) ) ) {
-			$is_backend = true;
-		} elseif ( defined( 'DOING_CRON' ) && DOING_CRON ) {
-			$is_backend = true;
-		} elseif ( PHP_SAPI == 'cli' || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
-			$is_backend = true;
-		}
-	}
-
-	return $is_backend;
-}

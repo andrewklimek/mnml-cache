@@ -20,12 +20,22 @@
  */
 function mc_file_cache( $buffer, $flags ) {
 
+	mnmlcache_debug('mc_file_cache - ' . $_SERVER['REQUEST_URI'] );
+
 	$headers = headers_list();
     foreach ($headers as $header) {
         if (stripos($header, 'Cache-Control:') === 0) {
             $cacheControl = trim(substr($header, strlen('Cache-Control:'), 0));
             $directives = array_map('trim', explode(',', $cacheControl));
-            if ( in_array('no-store', $directives) || in_array('private', $directives) ) {
+			if (
+                in_array('no-cache', $directives, true) ||
+                in_array('no-store', $directives, true) ||
+                in_array('private', $directives, true) ||
+                in_array('max-age=0', $directives, true) ||
+                in_array('must-revalidate', $directives, true) ||
+                in_array('proxy-revalidate', $directives, true) ||
+                in_array('s-maxage=0', $directives, true)
+            ) {	
 				mnmlcache_debug("header had no-store or private");
 			}
         }
@@ -68,9 +78,19 @@ function mc_file_cache( $buffer, $flags ) {
 	
 	// if we aren't saving 404... might be worth dropping them immediately so they don't always build fancy 404 pages
 	// Don't cache search, 404, or password protected... TODO arent these handled before somewhere?
+	if ( is_404() ) {
+		mnmlcache_debug("Page is 404");
+		return $buffer;
+	}
+	
+	if ( is_search() ) {
+		mnmlcache_debug("Page is search");
+		return $buffer;
+	}
+	
 	global $post;
-	if ( is_404() || is_search() || ! empty( $post->post_password ) ) {
-		mnmlcache_debug("Page is 404, search, or password protected");
+	if ( ! empty( $post->post_password ) ) {
+		mnmlcache_debug("Page is password protected");
 		return $buffer;
 	}
 
