@@ -195,9 +195,8 @@ function mc_serve_file_cache() {
 		if ( $using_gzip ) {
 			header( 'Content-Encoding: gzip' );
 		}
-		// header( $_SERVER['SERVER_PROTOCOL'] . ' 304 Not Modified', true, 304 );
 		http_response_code( 304 );
-		header( 'Cache-Control: max-age=' . HOUR_IN_SECONDS );// Why?
+		header( 'Cache-Control: public, stale-if-error=86400, max-age=' . HOUR_IN_SECONDS );// Might not need this... does a 304 reset expires timer?
 		header( 'X-Mnml-Cache: HIT' );
 		exit;
 	}
@@ -209,13 +208,14 @@ function mc_serve_file_cache() {
 		}
 	}
 	if ( $meta ) {
+		$cache_control = false;
 		foreach ( $meta as $header ) {
 			header( $header );
+			if (stripos($header, 'Cache-Control:') === 0) $cache_control = true;
 		}
-		header( 'Cache-Control: max-age=' . HOUR_IN_SECONDS );// Why?
+		if ( ! $cache_control ) header( 'Cache-Control: public, stale-if-error=86400, max-age=' . HOUR_IN_SECONDS );// Do we store this?
 	} else {
-		header( 'Cache-Control: max-age=' . HOUR_IN_SECONDS );// Why?
-		// header( 'Cache-Control: no-cache' );
+		header( 'Cache-Control: public, stale-if-error=86400, max-age=' . HOUR_IN_SECONDS );
 	}
 
 	if ( $modified_time ) {

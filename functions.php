@@ -22,10 +22,12 @@ function mc_file_cache( $buffer, $flags ) {
 
 	mnmlcache_debug('mc_file_cache - ' . $_SERVER['REQUEST_URI'] );
 
+	$nocache_header = false;
 	$headers = headers_list();
+	mnmlcache_debug($headers);
     foreach ($headers as $header) {
         if (stripos($header, 'Cache-Control:') === 0) {
-            $cacheControl = trim(substr($header, strlen('Cache-Control:'), 0));
+            $cacheControl = trim(substr($header, strlen('Cache-Control:')));
             $directives = array_map('trim', explode(',', $cacheControl));
 			if (
                 in_array('no-cache', $directives, true) ||
@@ -37,6 +39,7 @@ function mc_file_cache( $buffer, $flags ) {
                 in_array('s-maxage=0', $directives, true)
             ) {	
 				mnmlcache_debug("header had no-store or private");
+				$nocache_header = true;
 			}
         }
     }
@@ -44,7 +47,7 @@ function mc_file_cache( $buffer, $flags ) {
 	// https://github.com/Automattic/wp-super-cache/blob/88fc6d2b2b3800a34b42230b6b6796a2e6a9d95d/wp-cache-phase2.php#L2069
 
 	if ( ! did_filter('wp_headers') ) {
-		mnmlcache_debug("wp_headers didn't run so this shouldn't be cached!");
+		mnmlcache_debug("wp_headers didn't run so maybe this shouldn't be cached!?");
 		// return $buffer;
 	}
 
@@ -83,8 +86,10 @@ function mc_file_cache( $buffer, $flags ) {
 		return $buffer;
 	}
 	
+	// search pages have no cache-control headers... but maybe we should set them?  Fine for CDNs to cache imo but probably no one wants to store them on disk
 	if ( is_search() ) {
 		mnmlcache_debug("Page is search");
+		header( 'Cache-Control: max-age=900' );// 15 minutes for CDNs and private cache.  Perhaps this should be set earlier to allow templates to override.
 		return $buffer;
 	}
 	
@@ -109,6 +114,10 @@ function mc_file_cache( $buffer, $flags ) {
 	// Do not cache the REST API if the user has not opted-in or it's an authenticated REST API request.
 	if ( defined( 'REST_REQUEST' ) && REST_REQUEST && empty( $GLOBALS['mc_config']['enable_json_cache'] ) ) {
 		mnmlcache_debug("REST API request without JSON cache enabled");
+		return $buffer;
+	}
+
+	if ( $nocache_header ) {
 		return $buffer;
 	}
 
@@ -163,9 +172,7 @@ function mc_file_cache( $buffer, $flags ) {
 
 	header( 'Last-Modified: ' . gmdate( 'D, d M Y H:i:s' ) . ' GMT' );
 
-	// TODO why either one of these?
-	// header( 'Cache-Control: no-cache' ); // Check back every time to see if re-download is necessary.
-	header( 'Cache-Control: max-age=' . HOUR_IN_SECONDS );
+	header( 'Cache-Control: public, stale-if-error=86400, max-age=' . HOUR_IN_SECONDS );// TODO this might want to be before saving to store the header and avoid having to re-check it at serve?
 
 	// header( 'X-Mnml-Cache: MISS' );// this ends up shoing on CDN results if they are the first to serve the file.  Better to just have HIT vs nothing
 
