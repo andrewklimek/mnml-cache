@@ -99,7 +99,7 @@ function mc_file_cache( $buffer, $flags ) {
 		return $buffer;
 	}
 
-	if (function_exists('is_woocommerce') && (is_cart() || is_checkout())) {
+	if (function_exists('is_woocommerce') && (is_cart() || is_checkout())) {// there's also is_account_page() but you'd have to be logged in no?
 		mnmlcache_debug('Bypassing WooCommerce cart or checkout');
 		header( 'X-Mnml-Cache: BYPASSING WOO!' );
 		return $buffer;

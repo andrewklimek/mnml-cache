@@ -2,7 +2,10 @@
 /**
  * Cloudflare Integration
  * 
- * TODO add setting for key ... store in a separate option line, thats why i didnt do it right away.
+ * You really shouldn't need any specific setup on Cloudflare other than "enable everything" cache rule to enable HTML caching at all
+ * The cache-control headers should be respected and that's the whole point of them.
+ * So a rule like (not http.cookie contains "wordpress_logged_in_") works but shouldn't be required, nor any cart/checkout rules.
+ * See https://developers.cloudflare.com/cache/concepts/cache-control/#directives
  */
 function mnmlcache_cloudflare_purge_urls($urls) {
 	$api_token = get_option('mnmlcache_cloudflare_api_token');
