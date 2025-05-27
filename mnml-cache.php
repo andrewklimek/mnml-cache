@@ -51,6 +51,7 @@ add_filter( 'plugin_action_links', 'mc_filter_plugin_action_links', 10, 2 );
  * Clean up necessary files
  */
 function mc_deactivate() {
+	require_once __DIR__ . '/class-mc-cache.php';
 	mc_cache_flush();
 	MC_Advanced_Cache::factory()->clean_up();
 	MC_Advanced_Cache::factory()->toggle_caching( false );
@@ -79,5 +80,6 @@ function mc_uninstall() {
  */
 function mc_activate() {
 	MC_Config::factory()->write( array() );
+	update_option( 'mnmlcache_notices', [ 'welcome' => 3 ], true );
 }
 add_action( 'activate_' . plugin_basename( __FILE__ ), 'mc_activate' );

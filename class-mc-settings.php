@@ -29,6 +29,7 @@ class MC_Settings {
 		$main = [
 			'enable_caching' => [],
 			'private_cache' => [],
+			'private_cache_max_age' => ['type' => 'number', 'show' => 'private_cache', 'desc' => 'in hours'],
 			'enable_gzip_compression' => [ 'callback' => 'MC_Settings::settings_enable_gzip_compression' ],
 			'enable_json_cache' => [],
 			'restore_headers' => [ 'desc' => 'When enabled, the plugin will save the response headers present when the page is cached and it will send send them again when it serves the cached page. This is recommended when caching the REST API.'],
@@ -137,9 +138,6 @@ class MC_Settings {
 	*/
 	public function update() {
 
-		// var_export( $_REQUEST);
-		// exit;
-					
 		if ( empty( $_REQUEST['action'] ) || 'mc_update' !== $_REQUEST['action'] ) return;
 		
 		if ( ! current_user_can( 'manage_options' ) || empty( $_REQUEST['mc_settings_nonce'] ) || ! wp_verify_nonce( $_REQUEST['mc_settings_nonce'], 'mc_update_settings' ) ) {
@@ -149,14 +147,14 @@ class MC_Settings {
 		$verify_file_access = mc_verify_file_access();
 		
 		if ( is_array( $verify_file_access ) ) {
-			update_option( 'mc_cant_write', array_map( 'sanitize_text_field', $verify_file_access ) );
+			update_option( 'mnmlcache_notices', array_map( 'sanitize_text_field', $verify_file_access ), true );
 			
 			if ( in_array( 'cache', $verify_file_access, true ) ) {
 				wp_safe_redirect( $_REQUEST['url'] );
 				exit;
 			}
 		} else {
-			delete_option( 'mc_cant_write' );
+			delete_option( 'mnmlcache_notices' );
 		}
 		
 		$config = MC_Config::factory()->get();
@@ -175,7 +173,7 @@ class MC_Settings {
 		
 		require_once __DIR__ . '/class-mc-cache.php';
 		
-		if ( $config['enable_caching'] ) {
+		if ( !empty( $config['enable_caching'] ) ) {
 			MC_Advanced_Cache::factory()->write();
 			MC_Advanced_Cache::factory()->toggle_caching( true );
 		} else {

@@ -38,11 +38,11 @@ foreach ( $options as $group => $fields ) {
 		$l = isset( $f['label'] ) ? $f['label'] : str_replace( '_', ' ', $k );
 
 		if ( $serial ) {
-			$v = isset( $values[$k] ) ? $values[$k] : '';
+			$v = $values[$k] ?? '';
 			$name = "options[{$group}][{$k}]";// set name to an aray string to be use in field name, AFTER looking up value and setting label name, BEFORE making $k a clean id
 			$k = "{$group}_{$k}";
 		} else {
-			$k = rtrim($group, '_') .'_'. $k;// append group name BEFORE looking up value (but after setting label name).
+			$k = $group . $k;// append group name BEFORE looking up value (but after setting label name).
 			$name = "options[{$k}]";
 			$v = get_option( $k, '' );
 		}
@@ -54,19 +54,28 @@ foreach ( $options as $group => $fields ) {
 		if ( !empty( $f['show'] ) ) {
 			if ( is_string( $f['show'] ) ) $f['show'] = [ $f['show'] => 'any' ];
 			foreach( $f['show'] as $target => $cond ) {
+
+				if ( $serial ) {
+					$target_value = $values[$target] ?? null;
+					$target = "{$group}_{$target}";
+				} else {
+					$target = $group . $target;
+					$target_value = get_option( $target, null );
+				}
+
 				$hide = " style='display:none'";
 				$script .= "\ndocument.querySelector('#tr-{$target}').addEventListener('change', function(e){";
 				if ( $cond === 'any' ) {
 					$script .= "if( e.target.checked !== false && e.target.value )";
-					if ( !empty( $values[$target] ) ) $hide = "";
+					if ( $target_value ) $hide = "";
 				}
 				elseif ( $cond === 'empty' ) {
 					$script .= "if( e.target.checked === false || !e.target.value )";
-					if ( empty( $values[$target] ) ) $hide = "";
+					if ( ! $target_value ) $hide = "";
 				}
 				else {
 					$script .= "if( !!~['". implode( "','", (array) $cond ) ."'].indexOf(e.target.value) && e.target.checked!==false)";
-					if ( !empty( $values[$target] ) && in_array( $values[$target], (array) $cond ) ) $hide = "";
+					if ( $target_value && in_array( $target_value, (array) $cond ) ) $hide = "";
 				}
 				$script .= "{document.querySelector('#tr-{$k}').style.display='revert'}";
 				$script .= "else{document.querySelector('#tr-{$k}').style.display='none'}";

@@ -20,6 +20,8 @@ function mnmlcache_main(){
 		return;
 	}
 
+	global $mc_config;
+
 	$requestUri = $_SERVER['REQUEST_URI'] ?? '';
 	$path = parse_url($requestUri, PHP_URL_PATH) ?: ''; // Extract path, discard query string
     // $path = basename($requestUri);
@@ -61,11 +63,11 @@ function mnmlcache_main(){
 		foreach (array_keys($_COOKIE) as $key) {
 			if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
 				mnmlcache_debug('logged in');
-				if ( !empty( $GLOBALS['mc_config']['private_cache'] ) ) {
+				if ( !empty( $mc_config['private_cache'] ) ) {
 					// set cache control
 					// $nonce_life = apply_filters('nonce_life', DAY_IN_SECONDS);// maybe show this value in settings UI and let them know what to do if its short.
-					// $max_age = min($GLOBALS['mc_config']['browser_cache_max_age'] ?? 3600, $nonce_life / 2);
-					$max_age = $GLOBALS['mc_config']['browser_cache_max_age'] ?? 3600;
+					// $max_age = min($mc_config['private_cache_max_age'] ?? 3600, $nonce_life / 2);
+					$max_age = 3600 * ( $mc_config['private_cache_max_age'] ?? 1 );// setting is in hours
 					// header("Cache-Control: private, max-age=$max_age");
 					// header('Vary: Cookie');
 					// add_filter('nocache_headers', function() use ( $max_age ){// TODO this might want some conditional tags. check in what places nocache_headers is used
@@ -118,10 +120,10 @@ function mnmlcache_main(){
 
 	// exceptions
 	// people may want to add /cart/ or /checkout/ but those two are also handled in mc_file_cache() when the woo conditionals are available
-	if ( ! empty( $GLOBALS['mc_config']['cache_only_urls'] ) ) {
-		$exceptions = explode( "\n", $GLOBALS['mc_config']['cache_only_urls'] );
+	if ( ! empty( $mc_config['cache_only_urls'] ) ) {
+		$exceptions = explode( "\n", $mc_config['cache_only_urls'] );
 
-		$regex = ! empty( $GLOBALS['mc_config']['enable_url_exemption_regex'] );
+		$regex = ! empty( $mc_config['enable_url_exemption_regex'] );
 		$matched = false;
 		foreach ( $exceptions as $exception ) {
 			if ( mc_url_exception_match( $exception, $regex ) ) {
@@ -134,10 +136,10 @@ function mnmlcache_main(){
 			return;
 		}
 	}
-	elseif ( ! empty( $GLOBALS['mc_config']['cache_exception_urls'] ) ) {
-		$exceptions = explode( "\n", $GLOBALS['mc_config']['cache_exception_urls'] );
+	elseif ( ! empty( $mc_config['cache_exception_urls'] ) ) {
+		$exceptions = explode( "\n", $mc_config['cache_exception_urls'] );
 
-		$regex = ! empty( $GLOBALS['mc_config']['enable_url_exemption_regex'] );
+		$regex = ! empty( $mc_config['enable_url_exemption_regex'] );
 
 		foreach ( $exceptions as $exception ) {
 			if ( mc_url_exception_match( $exception, $regex ) ) {
@@ -170,10 +172,12 @@ function mnmlcache_main(){
  */
 function mc_serve_file_cache() {
 
+	global $mc_config;
+
 	$path = mc_get_url_path();
 	$meta_path = $path . '.json';
 
-	$using_gzip = !empty( $GLOBALS['mc_config']['enable_gzip_compression'] ) && function_exists('gzencode');
+	$using_gzip = !empty( $mc_config['enable_gzip_compression'] ) && function_exists('gzencode');
 	if ( $using_gzip ) {
 		$reg_path = $path;
 		$path .= '.gzip';
@@ -202,7 +206,7 @@ function mc_serve_file_cache() {
 	}
 
 	$meta = [];
-	if ( ! empty( $GLOBALS['mc_config']['restore_headers'] ) ) {
+	if ( ! empty( $mc_config['restore_headers'] ) ) {
 		if ( @file_exists( $meta_path ) && @is_readable( $meta_path ) ) {
 			$meta = json_decode( @file_get_contents( $meta_path ) );
 		}
@@ -241,6 +245,8 @@ function mc_serve_file_cache() {
  */
 function mc_get_url_path( $url='' ) {
 
+	global $mc_config;
+
 	// return $_SERVER['REQUEST_URI'];
 	$url = $url ?: $_SERVER['REQUEST_URI'];
     $parsed = parse_url($url);
@@ -254,9 +260,9 @@ function mc_get_url_path( $url='' ) {
         parse_str($parsed['query'], $params);
 		ksort($params);
 		// might need to handle wildcards like utm*
-        // $whitelist = !empty($GLOBALS['mc_config']['param_whitelist']) ? array_map('trim', explode(',', $GLOBALS['mc_config']['param_whitelist'])) : [];
+        // $whitelist = !empty($mc_config['param_whitelist']) ? array_map('trim', explode(',', $mc_config['param_whitelist'])) : [];
         // $filtered_params = array_intersect_key($params, array_flip($whitelist));
-        $blacklist = !empty($GLOBALS['mc_config']['param_blacklist']) ? array_map('trim', explode(',', $GLOBALS['mc_config']['param_blacklist'])) : ['utm','fbclid','gclid','_ga'];
+        $blacklist = !empty($mc_config['param_blacklist']) ? array_map('trim', explode(',', $mc_config['param_blacklist'])) : ['utm','fbclid','gclid','_ga'];
         $filtered_params = array_diff_key($params, array_flip($blacklist));
         if ($filtered_params) {
             $file_name .= '_' . http_build_query( $filtered_params );
