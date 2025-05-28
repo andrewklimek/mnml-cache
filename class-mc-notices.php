@@ -57,6 +57,14 @@ class MC_Notices {
 
 		$advanced_cache_broken = ! $wp_cache_broken && ! empty( $config['enable_caching'] ) && ( ! defined( 'MC_ADVANCED_CACHE' ) || ! MC_ADVANCED_CACHE );
 
+		// prevent warning for initial load after enabling.. 
+		// this still shows if you reload the page quickly after save.
+		// and of course it doesn't guarantee that options was just toggled
+		if ( $wp_cache_broken ) {
+			$maybe_just_enabled_cache = $_POST['options']['mnmlcache']['enable_caching'] ?? false;
+			if ( $maybe_just_enabled_cache ) $wp_cache_broken = false;
+		}
+
 		if ( empty( $notices ) && ! $wp_cache_broken && ! $advanced_cache_broken ) {
 			return;
 		}

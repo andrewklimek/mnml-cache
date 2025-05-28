@@ -172,7 +172,7 @@ class MC_Advanced_Cache {
 		}
 
 		// Split into lines, preserving original line endings
-		$lines    = preg_split("/(\r\n|\n|\r)/", $config_content, -1, PREG_SPLIT_DELIM_CAPTURE);
+		$lines = file($config_path, FILE_IGNORE_NEW_LINES);
 		$line_key = false;
 
 		// Look for existing WP_CACHE definition
@@ -183,8 +183,8 @@ class MC_Advanced_Cache {
 			}
 		}
 
-		// Prepare the new WP_CACHE line
-		$new_line = "define('WP_CACHE', " . ($status ? 'true' : 'false') . ");// added by mnml cache";
+		// Prepare the new WP_CACHE line with proper formatting
+		$new_line = "define('WP_CACHE', " . ($status ? 'true' : 'false') . "); // added by mnml cache";
 
 		// Modify the file content
 		if ($line_key !== false) {
@@ -195,25 +195,24 @@ class MC_Advanced_Cache {
 			$inserted = false;
 			foreach ($lines as $key => $line) {
 				if (preg_match('/^\s*<\?php/i', $line)) {
-					array_splice($lines, $key + 1, 0, [$new_line, '']);
+					array_splice($lines, $key + 1, 0, ['', $new_line] );
 					$inserted = true;
 					break;
 				}
 			}
-			// If no <?php found, prepend <?php and the new line... yes this really shouldn't happen
+			// If no <?php found, prepend <?php and the new line
 			if (!$inserted) {
-				array_unshift($lines, '<?php', $new_line, '');
+				array_unshift($lines, '<?php', '', $new_line);
 			}
 		}
 
-		// Join lines with original line endings
-		$new_content = implode('', $lines);
+		$new_content = implode(PHP_EOL, $lines);
 
 		// Write the modified content
 		if (file_put_contents($config_path, $new_content) === false) {
 			return false;
 		}
-
+		
 		return true;
 	}
 

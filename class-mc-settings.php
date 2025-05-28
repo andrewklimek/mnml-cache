@@ -149,7 +149,7 @@ class MC_Settings {
 		if ( is_array( $verify_file_access ) ) {
 			update_option( 'mnmlcache_notices', array_map( 'sanitize_text_field', $verify_file_access ), true );
 			
-			if ( in_array( 'cache', $verify_file_access, true ) ) {
+			if ( in_array( 'cache', $verify_file_access, true ) && ! empty( $_REQUEST['url'] ) ) {
 				wp_safe_redirect( $_REQUEST['url'] );
 				exit;
 			}
@@ -172,7 +172,7 @@ class MC_Settings {
 		}
 		
 		require_once __DIR__ . '/class-mc-cache.php';
-		
+
 		if ( !empty( $config['enable_caching'] ) ) {
 			MC_Advanced_Cache::factory()->write();
 			MC_Advanced_Cache::factory()->toggle_caching( true );
@@ -184,8 +184,7 @@ class MC_Settings {
 			wp_safe_redirect( $_REQUEST['url'] );
 			exit;
 		}
-		
-		return "Saved";
+
 	}
 	
 	
