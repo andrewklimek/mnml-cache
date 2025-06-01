@@ -34,18 +34,10 @@ class MC_Advanced_Cache {
 			
 			$url_path = get_url_path($url);
 			
-			$cache_file = $url_path;
-			$gzip_file = $url_path . ".gzip";
-			$header_file = $url_path . ".json";
-			if (file_exists($cache_file)) {
-				unlink($cache_file);
-			}
-			if (file_exists($gzip_file)) {
-				unlink($gzip_file);
-			}
-			if (file_exists($header_file)) {
-				unlink($header_file);
-			}
+			if (file_exists($url_path)) unlink($url_path);
+			if (file_exists($url_path . ".gzip")) unlink($url_path . ".gzip");
+			if (file_exists($url_path . ".json")) unlink($url_path . ".json");
+			
 			if (defined('WP_DEBUG') && WP_DEBUG) {
 				mnmlcache_debug("mnml cache: Purged cache for URL: $url");
 			}
@@ -99,7 +91,6 @@ class MC_Advanced_Cache {
 
 	/**
 	 * Every time a comments status changes, purge it's parent posts cache
-	 * TODO doesn't this run when the approved code below runs too?  or is it not considered a change if it goes straight to approved?
 	 *
 	 * @param  int $comment_id Comment ID.
 	 */
@@ -107,31 +98,7 @@ class MC_Advanced_Cache {
 
 		$comment = get_comment($comment_id);
 		$post_id = $comment->comment_post_ID;
-
-		$path = MC_CACHE_DIR . '/' . preg_replace('#https?://#i', '', get_permalink($post_id));
-
-		@unlink(untrailingslashit($path) . '/index.html');
-		@unlink(untrailingslashit($path) . '/index.gzip.html');
-	}
-
-	/**
-	 * Purge post cache when there is a new approved comment
-	 *
-	 * @param  int   $comment_id Comment ID.
-	 * @param  int   $approved Comment approved status.
-	 * @param  array $commentdata Comment data array.
-	 */
-	public function purge_post_on_comment($comment_id, $approved, $commentdata) {
-		if (empty($approved)) {
-			return;
-		}
-
-		$post_id = $commentdata['comment_post_ID'];
-
-		$path = MC_CACHE_DIR . '/' . preg_replace('#https?://#i', '', get_permalink($post_id));
-
-		@unlink(untrailingslashit($path) . '/index.html');
-		@unlink(untrailingslashit($path) . '/index.gzip.html');
+		$self->cache_purge( get_permalink( $post_id ) );
 	}
 
 	/**
