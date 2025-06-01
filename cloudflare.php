@@ -11,7 +11,7 @@ function mnmlcache_cloudflare_purge_urls($urls) {
 	$api_token = get_option('mnmlcache_cloudflare_api_token');
     $zone_id = mnmlcache_get_cloudflare_zone_id($api_token);
     if (!$api_token || !$zone_id) {
-        error_log('Page Cache Plugin: Missing Cloudflare API token or zone ID');
+        mnmlcache_debug('Page Cache Plugin: Missing Cloudflare API token or zone ID');
         return false;
     }
 
@@ -24,11 +24,11 @@ function mnmlcache_cloudflare_purge_urls($urls) {
     ]);
 
     if (is_wp_error($response)) {
-        error_log('Page Cache Plugin: Cloudflare purge failed: ' . $response->get_error_message());
+        mnmlcache_debug('Page Cache Plugin: Cloudflare purge failed: ' . $response->get_error_message());
         return false;
     }
     if (wp_remote_retrieve_response_code($response) !== 200) {
-        error_log('Page Cache Plugin: Cloudflare purge failed: ' . wp_remote_retrieve_body($response));
+        mnmlcache_debug('Page Cache Plugin: Cloudflare purge failed: ' . wp_remote_retrieve_body($response));
         return false;
     }
     return true;
@@ -36,9 +36,9 @@ function mnmlcache_cloudflare_purge_urls($urls) {
 
 function mnmlcache_cloudflare_purge_all() {
     $api_token = get_option('mnmlcache_cloudflare_api_token');
-    $zone_id = get_option('mnmlcache_cloudflare_zone_id');
+    $zone_id = mnmlcache_get_cloudflare_zone_id($api_token);
     if (!$api_token || !$zone_id) {
-        error_log('Page Cache Plugin: Missing Cloudflare API token or zone ID');
+        mnmlcache_debug('Page Cache Plugin: Missing Cloudflare API token or zone ID');
         return false;
     }
 
@@ -51,11 +51,11 @@ function mnmlcache_cloudflare_purge_all() {
     ]);
 
     if (is_wp_error($response)) {
-        error_log('Page Cache Plugin: Cloudflare purge all failed: ' . $response->get_error_message());
+        mnmlcache_debug('Page Cache Plugin: Cloudflare purge all failed: ' . $response->get_error_message());
         return false;
     }
     if (wp_remote_retrieve_response_code($response) !== 200) {
-        error_log('Page Cache Plugin: Cloudflare purge all failed: ' . wp_remote_retrieve_body($response));
+        mnmlcache_debug('Page Cache Plugin: Cloudflare purge all failed: ' . wp_remote_retrieve_body($response));
         return false;
     }
     return true;
@@ -75,11 +75,12 @@ function mnmlcache_get_cloudflare_zone_id($api_token) {
     ]);
 
     if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
-        error_log('Page Cache Plugin: Failed to get Cloudflare zone ID: ' . wp_remote_retrieve_body($response));
+        mnmlcache_debug('Page Cache Plugin: Failed to get Cloudflare zone ID: ' . wp_remote_retrieve_body($response));
         return false;
     }
 
     $body = json_decode(wp_remote_retrieve_body($response), true);
+
     foreach ($body['result'] as $zone) {
         if ($zone['name'] === parse_url(home_url(), PHP_URL_HOST)) {
             update_option('mnmlcache_cloudflare_zone_id', $zone['id']);
