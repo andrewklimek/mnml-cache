@@ -3,22 +3,99 @@
  * Page caching functionality
  */
 
+namespace mnmlcache;
+
 defined('ABSPATH') || exit;
 
-/**
- * Wrapper for advanced cache functionality
- */
 class MC_Advanced_Cache {
 
-	/**
-	 * Setup hooks/filters
-	 */
 	public function setup() {
 		add_action('pre_post_update', [$this, 'purge_post_on_update'], 10, 1);
 		add_action('save_post', [$this, 'purge_post_on_update'], 10, 1);
 		add_action('wp_trash_post', [$this, 'purge_post_on_update'], 10, 1);
 		add_action('wp_set_comment_status', [$this, 'purge_post_on_comment_status_change'], 10);
 	}
+
+
+	/**
+	 * Clear whole cache or one url
+	 */
+	public function cache_purge( $url = false ) {
+
+		if ( false === $url ) {
+
+			$this->empty_dir( MC_CACHE_DIR );
+
+			wp_cache_flush();
+
+			mnmlcache_cloudflare_purge_all();
+
+		} else {
+			
+			$url_path = get_url_path($url);
+			
+			$cache_file = $url_path;
+			$gzip_file = $url_path . ".gzip";
+			$header_file = $url_path . ".json";
+			if (file_exists($cache_file)) {
+				unlink($cache_file);
+			}
+			if (file_exists($gzip_file)) {
+				unlink($gzip_file);
+			}
+			if (file_exists($header_file)) {
+				unlink($header_file);
+			}
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				mnmlcache_debug("mnml cache: Purged cache for URL: $url");
+			}
+			mnmlcache_cloudflare_purge_urls([$url]);
+		}
+	}
+
+	/**
+	 * Empty a directory, optionally delete it too.
+	 *
+	 * @param  string $dir Directory
+	 * @param    bool $retain_root Should root directory itself be delete or retained
+	 */
+	public function empty_dir($dir, $retain_root = true) {
+
+		if (!is_string($dir) || empty($dir) || !is_dir($dir) || !is_readable($dir)) {
+			return false;
+		}
+
+		$handle = opendir($dir);
+		if ($handle === false) {
+			return false;
+		}
+
+		while (false !== ($object = readdir($handle))) {
+			if ($object === '.' || $object === '..') continue;
+			$path = $dir . DIRECTORY_SEPARATOR . $object;
+			if (is_dir($path)) {
+				// Recursively clear subdirectory
+				if (!$this->empty_dir($path, false)) {
+					closedir($handle);
+					return false;
+				}
+			} else {
+				if (!@unlink($path)) {
+					closedir($handle);
+					return false;
+				}
+			}
+		}
+
+		closedir($handle);
+
+		if ( ! $retain_root ) {
+			return @rmdir($dir);
+		}
+
+		return true;
+	}
+
 
 	/**
 	 * Every time a comments status changes, purge it's parent posts cache
@@ -79,7 +156,7 @@ class MC_Advanced_Cache {
 			return;
 		}
 
-		mc_cache_flush();
+		$self->cache_purge();
 	}
 
 	/**

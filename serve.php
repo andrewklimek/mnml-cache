@@ -2,17 +2,20 @@
 /**
  * Holds functions that can be loaded in advanced-cache.php
  */
+namespace mnmlcache;
+
 defined( 'ABSPATH' ) || exit;
 
 defined( 'MC_CACHE_DIR' ) || define( 'MC_CACHE_DIR', WP_CONTENT_DIR . '/cache/mnml-cache' );
 
 function mnmlcache_debug( $content ) {
+	if (empty($GLOBALS['mnmlcache_config']['enable_debugging'])) return;
 	if ( !is_string ( $content ) ) $content = var_export( $content, true );
 	error_log( $content . "\n", 3, __DIR__ . '/_debug.log' );
 }
 
 
-function mnmlcache_main(){
+function main(){
 	// https://github.com/Automattic/wp-super-cache/blob/88fc6d2b2b3800a34b42230b6b6796a2e6a9d95d/wp-cache-phase2.php#L1575
 
 	// Don't cache non-GET requests.
@@ -20,7 +23,7 @@ function mnmlcache_main(){
 		return;
 	}
 
-	global $mc_config;
+	$config = $GLOBALS['mnmlcache_config'];
 
 	$requestUri = $_SERVER['REQUEST_URI'] ?? '';
 	$path = parse_url($requestUri, PHP_URL_PATH) ?: ''; // Extract path, discard query string
@@ -62,47 +65,7 @@ function mnmlcache_main(){
 	if ( ! empty( $_COOKIE ) ) {
 		foreach (array_keys($_COOKIE) as $key) {
 			if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
-				mnmlcache_debug('logged in');
-				if ( !empty( $mc_config['private_cache'] ) ) {
-					// set cache control
-					// $nonce_life = apply_filters('nonce_life', DAY_IN_SECONDS);// maybe show this value in settings UI and let them know what to do if its short.
-					// $max_age = min($mc_config['private_cache_max_age'] ?? 3600, $nonce_life / 2);
-					$max_age = 3600 * ( $mc_config['private_cache_max_age'] ?? 1 );// setting is in hours
-					// header("Cache-Control: private, max-age=$max_age");
-					// header('Vary: Cookie');
-					// add_filter('nocache_headers', function() use ( $max_age ){// TODO this might want some conditional tags. check in what places nocache_headers is used
-					// 	return [
-					// 		'Cache-Control' => "private, max-age=$max_age",
-					// 		'Vary' => 'Cookie',
-					// 	];
-					// });
-					add_filter( 'wp_headers', function( $headers, $wp ) use ( $max_age ) {
-						
-						mnmlcache_debug("did_filter(nocache_headers): " . did_filter('nocache_headers') );// returns 2 for password protected, 1 for anythign WP added these to
-						// mnmlcache_debug($_SERVER['REQUEST_URI']);
-						// mnmlcache_debug($headers);
-						
-						// this applies to previews....
-
-						// it affects password protected posts, but testing i think youc an review them anyway once you put the password in once. and logging out seemed to work... is that from the vary cookies?
-
-						// This does affect Woo Cart, but they have a safety hook on 'wp' to set no-store again...
-						// https://github.com/woocommerce/woocommerce/blob/0d01426dca020bde95275f90002c4f412709269a/plugins/woocommerce/includes/class-wc-cache-helper.php#L149
-						// See https://github.com/woocommerce/woocommerce/blob/0d01426dca020bde95275f90002c4f412709269a/plugins/woocommerce/includes/class-wc-cache-helper.php#L46
-						if ( isset( $headers['Cache-Control'] ) && false !== strpos( $headers['Cache-Control'], 'no-cache' ) ) {
-							$headers['Cache-Control'] = "private, max-age=$max_age";
-							$headers['Vary'] = "Cookie";
-							unset( $headers['Expires']);
-						}
-						mnmlcache_debug($headers);
-
-						return $headers;
-					}, 2, 100 );
-					add_action('shutdown', function(){
-						mnmlcache_debug('headers at shutdown: ' . var_export(headers_list(),1));
-						mnmlcache_debug("did_filter(nocache_headers): " . did_filter('nocache_headers') );// returns 2 for password protected, 1 for anythign WP added these to
-					});
-				}
+				// mnmlcache_debug('logged in');
 				return;
 			}
 		}
@@ -119,14 +82,14 @@ function mnmlcache_main(){
 	}
 
 	// exceptions
-	// people may want to add /cart/ or /checkout/ but those two are also handled in mc_file_cache() when the woo conditionals are available
-	if ( ! empty( $mc_config['cache_only_urls'] ) ) {
-		$exceptions = explode( "\n", $mc_config['cache_only_urls'] );
+	// people may want to add /cart/ or /checkout/ but those two are also handled in file_cache() when the woo conditionals are available
+	if ( ! empty( $config['cache_only_urls'] ) ) {
+		$exceptions = explode( "\n", $config['cache_only_urls'] );
 
-		$regex = ! empty( $mc_config['enable_url_exemption_regex'] );
+		$regex = ! empty( $config['enable_url_exemption_regex'] );
 		$matched = false;
 		foreach ( $exceptions as $exception ) {
-			if ( mc_url_exception_match( $exception, $regex ) ) {
+			if ( url_exception_match( $exception, $regex ) ) {
 				$matched = true;
 				break;
 			}
@@ -136,20 +99,20 @@ function mnmlcache_main(){
 			return;
 		}
 	}
-	elseif ( ! empty( $mc_config['cache_exception_urls'] ) ) {
-		$exceptions = explode( "\n", $mc_config['cache_exception_urls'] );
+	elseif ( ! empty( $config['cache_exception_urls'] ) ) {
+		$exceptions = explode( "\n", $config['cache_exception_urls'] );
 
-		$regex = ! empty( $mc_config['enable_url_exemption_regex'] );
+		$regex = ! empty( $config['enable_url_exemption_regex'] );
 
 		foreach ( $exceptions as $exception ) {
-			if ( mc_url_exception_match( $exception, $regex ) ) {
+			if ( url_exception_match( $exception, $regex ) ) {
 				mnmlcache_debug("skipping exception $exception");
 				return;
 			}
 		}
 	}
 
-	mc_serve_file_cache();
+	serve();
 	// mnmlcache_debug('ob_start');
 
 	// OK we didn't have the file cached, time to load the other functions and let WP generate the page.
@@ -157,8 +120,8 @@ function mnmlcache_main(){
 	// remove_action( 'template_redirect', 'rest_output_link_header', 11 );
 	// remove_action( 'template_redirect', 'wp_shortlink_header', 11 );
 
-	require_once __DIR__ . '/functions.php';
-	ob_start( 'mc_file_cache' );
+	require_once __DIR__ . '/output.php';
+	ob_start( __NAMESPACE__ . '\output_handler' );
 	add_action('send_headers', function(){
 		$ob = ob_get_contents();
 		if ( '' !== $ob ) {
@@ -170,14 +133,14 @@ function mnmlcache_main(){
 /**
  * Optionally serve cache and exit
  */
-function mc_serve_file_cache() {
+function serve() {
 
-	global $mc_config;
+	$config = $GLOBALS['mnmlcache_config'];
 
-	$path = mc_get_url_path();
+	$path = get_url_path();
 	$meta_path = $path . '.json';
 
-	$using_gzip = !empty( $mc_config['enable_gzip_compression'] ) && function_exists('gzencode');
+	$using_gzip = !empty( $config['enable_gzip_compression'] ) && function_exists('gzencode');
 	if ( $using_gzip ) {
 		$reg_path = $path;
 		$path .= '.gzip';
@@ -206,7 +169,7 @@ function mc_serve_file_cache() {
 	}
 
 	$meta = [];
-	if ( ! empty( $mc_config['restore_headers'] ) ) {
+	if ( ! empty( $config['restore_headers'] ) ) {
 		if ( @file_exists( $meta_path ) && @is_readable( $meta_path ) ) {
 			$meta = json_decode( @file_get_contents( $meta_path ) );
 		}
@@ -243,9 +206,9 @@ function mc_serve_file_cache() {
  *
  * @return string
  */
-function mc_get_url_path( $url='' ) {
+function get_url_path( $url='' ) {
 
-	global $mc_config;
+	$config = $GLOBALS['mnmlcache_config'];
 
 	// return $_SERVER['REQUEST_URI'];
 	$url = $url ?: $_SERVER['REQUEST_URI'];
@@ -260,9 +223,9 @@ function mc_get_url_path( $url='' ) {
         parse_str($parsed['query'], $params);
 		ksort($params);
 		// might need to handle wildcards like utm*
-        // $whitelist = !empty($mc_config['param_whitelist']) ? array_map('trim', explode(',', $mc_config['param_whitelist'])) : [];
+        // $whitelist = !empty($config['param_whitelist']) ? array_map('trim', explode(',', $config['param_whitelist'])) : [];
         // $filtered_params = array_intersect_key($params, array_flip($whitelist));
-        $blacklist = !empty($mc_config['param_blacklist']) ? array_map('trim', explode(',', $mc_config['param_blacklist'])) : ['utm','fbclid','gclid','_ga'];
+        $blacklist = !empty($config['param_blacklist']) ? array_map('trim', explode(',', $config['param_blacklist'])) : ['utm','fbclid','gclid','_ga'];
         $filtered_params = array_diff_key($params, array_flip($blacklist));
         if ($filtered_params) {
             $file_name .= '_' . http_build_query( $filtered_params );
@@ -291,7 +254,7 @@ function mc_get_url_path( $url='' ) {
  * @param  bool   $regex Whether to check with regex or not.
  * @return boolean
  */
-function mc_url_exception_match( $rule, $regex = false ) {
+function url_exception_match( $rule, $regex = false ) {
 
 	$rule = trim( $rule );
 

@@ -7,6 +7,8 @@
  * So a rule like (not http.cookie contains "wordpress_logged_in_") works but shouldn't be required, nor any cart/checkout rules.
  * See https://developers.cloudflare.com/cache/concepts/cache-control/#directives
  */
+namespace mnmlcache;
+
 function mnmlcache_cloudflare_purge_urls($urls) {
 	$api_token = get_option('mnmlcache_cloudflare_api_token');
     $zone_id = mnmlcache_get_cloudflare_zone_id($api_token);
