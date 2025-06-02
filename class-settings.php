@@ -57,6 +57,11 @@ class MC_Settings {
 	*/
 	public function settings_page() {
 
+		$shards = count(glob(MC_CACHE_DIR . '/*/*', GLOB_ONLYDIR));
+		$pages = count(glob(MC_CACHE_DIR . '/*/*/*', GLOB_ONLYDIR));
+		// $files = count(glob(MC_CACHE_DIR . '/*/*/*/*'));
+		echo "Cache Statistics: $shards directories, $pages pages";
+
 		$options = [ 'mnmlcache' => $this->get_options() ];
 		$options['mnmlcache_'] = [ 'cloudflare_api_token' => [ 'type' => 'text' ] ];
 		
@@ -66,7 +71,6 @@ class MC_Settings {
 		$values = $GLOBALS['mnmlcache_config'];
 		$title = "Mnml Cache";
 		require( __DIR__.'/settings-framework.php' );
-		
 	}
 
 	public static function settings_enable_gzip_compression( $g, $k, $v, $f, $l ) {
