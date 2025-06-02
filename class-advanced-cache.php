@@ -86,7 +86,6 @@ class MC_Advanced_Cache {
 	public function cache_purge($url = false, $post_id = 0) {
 		if ($url === false && $post_id === 0) {
 			$this->empty_dir(MC_CACHE_DIR . '/');
-			wp_cache_clear();
 			mnmlcache_cloudflare_purge_all();
 			mnmlcache_debug("Purged entire cache directory");
 			return true;
