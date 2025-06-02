@@ -86,7 +86,7 @@ class MC_Advanced_Cache {
 	public function cache_purge($url = false, $post_id = 0) {
 		if ($url === false && $post_id === 0) {
 			$this->empty_dir(MC_CACHE_DIR . '/');
-			mnmlcache_cloudflare_purge_all();
+			cloudflare_purge();
 			mnmlcache_debug("Purged entire cache directory");
 			return true;
 		}
@@ -109,7 +109,7 @@ class MC_Advanced_Cache {
 		if (is_dir($cache_dir)) {
 			$success = $this->empty_dir($cache_dir, true);
 		}
-		mnmlcache_cloudflare_purge_urls([$url]);
+		cloudflare_purge([$url]);
 		mnmlcache_debug($success
 			? "Purged cache for URL: $url, post_id: $post_id ($cache_dir)"
 			: "Failed to purge cache for URL: $url, post_id: $post_id (directory $cache_dir not found)");

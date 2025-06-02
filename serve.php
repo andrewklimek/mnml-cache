@@ -220,11 +220,11 @@ function get_url_path($url = '', $skip_file_name = false) {
 		$segments = explode('/', $path);
 		$page = array_pop($segments);
 		$url_dir = $segments ? implode('/', $segments) : '_root';
-		if ($config['sharding_method'] === 'md5') {
+		if ($config['storage_scheme'] === 'md5') {
 			$page = md5($page); // Use full MD5 for page name
 			$shard = substr($page, 0, 1); // Shard is first character of MD5
 		} else {
-			$shard = strlen($page) >= 2 && $config['sharding_method'] === '2-letter' ? substr($page, 0, 2) : substr($page, 0, 1);
+			$shard = strlen($page) >= 2 && $config['storage_scheme'] === '2-letter' ? substr($page, 0, 2) : substr($page, 0, 1);
 			if (strlen($page) > 50) {
 				$page = substr( $page, 0, 16 ) . substr( md5( $page ), 0, 16 ); // Truncate long slugs
 			}
