@@ -273,9 +273,9 @@ function mnmlcache_sanitize_path( $path ) {
 		$original = $path;
 	}
 	// $path = str_replace( '.', '-', $path );
-	// $path = preg_replace( '/\s+/', '-', $path );
-	$path = preg_replace( '/[^a-z0-9_]/', '-', $path );
-	$path = preg_replace( '/-+/', '-', trim( $path, '-' ) );
+	// $path = preg_replace( '|\s+|', '-', $path );
+	$path = preg_replace( '|[^a-z0-9_/]|', '-', $path );
+	$path = preg_replace( '|-+|', '-', trim( $path, '-' ) );
 	
     return $path ?: 'unnamed';
 }
