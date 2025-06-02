@@ -11,7 +11,7 @@ defined( 'MC_CACHE_DIR' ) || define( 'MC_CACHE_DIR', WP_CONTENT_DIR . '/cache/mn
 function mnmlcache_debug( $content ) {
 	if (empty($GLOBALS['mnmlcache_config']['enable_debugging'])) return;
 	if ( !is_string ( $content ) ) $content = var_export( $content, true );
-	error_log( $content . "\n", 3, __DIR__ . '/_debug.log' );
+	error_log( $content . "\n", 3, MC_CACHE_DIR . '/debug.log' );
 }
 
 
@@ -206,45 +206,78 @@ function serve() {
  *
  * @return string
  */
-function get_url_path( $url='' ) {
-
-	$config = $GLOBALS['mnmlcache_config'];
-
-	// return $_SERVER['REQUEST_URI'];
-	$url = $url ?: $_SERVER['REQUEST_URI'];
+function get_url_path($url = '', $skip_file_name = false) {
+    $config = $GLOBALS['mnmlcache_config'];
+    $url = $url ?: $_SERVER['REQUEST_URI'];
     $parsed = parse_url($url);
-    $path = $file_name = isset($parsed['path']) ? trim($parsed['path'], '/') : '';
-	$segments = explode('/', $path);
-    $page = array_pop($segments);
-	$url_dir = $segments ? implode('/', $segments) : '_root';
-	// if (strlen($url_dir) > 100) // could truncate or limit depth
-	if (isset($parsed['query'])) {
-		$params = [];
+    $path = isset($parsed['path']) ? trim($parsed['path'], '/') : '';
+	if ( ! $path ) {
+		$page = '_home';
+		$shard = '_home';
+		$url_dir = '_root';
+	} else {
+		$path = mnmlcache_sanitize_path( $path );
+		$segments = explode('/', $path);
+		$page = array_pop($segments);
+		$url_dir = $segments ? implode('/', $segments) : '_root';
+		if ($config['sharding_method'] === 'md5') {
+			$page = md5($page); // Use full MD5 for page name
+			$shard = substr($page, 0, 1); // Shard is first character of MD5
+		} else {
+			$shard = strlen($page) >= 2 && $config['sharding_method'] === '2-letter' ? substr($page, 0, 2) : substr($page, 0, 1);
+			if (strlen($page) > 50) {
+				$page = substr( $page, 0, 16 ) . substr( md5( $page ), 0, 16 ); // Truncate long slugs
+			}
+		}
+	}
+	if ( $skip_file_name ) {
+	    return MC_CACHE_DIR . "/$url_dir/$shard/$page";	
+	}
+    $file_name = 'index'; // Default to 'index' for no query strings
+    if (isset($parsed['query'])) {
+        $params = [];
         parse_str($parsed['query'], $params);
-		ksort($params);
-		// might need to handle wildcards like utm*
-        // $whitelist = !empty($config['param_whitelist']) ? array_map('trim', explode(',', $config['param_whitelist'])) : [];
-        // $filtered_params = array_intersect_key($params, array_flip($whitelist));
-        $blacklist = !empty($config['param_blacklist']) ? array_map('trim', explode(',', $config['param_blacklist'])) : ['utm','fbclid','gclid','_ga'];
+        ksort($params);
+        $blacklist = !empty($config['param_blacklist']) ? array_map('trim', explode(',', $config['param_blacklist'])) : ['utm', 'fbclid', 'gclid', '_ga'];
         $filtered_params = array_diff_key($params, array_flip($blacklist));
         if ($filtered_params) {
-            $file_name .= '_' . http_build_query( $filtered_params );
+            $file_name = md5( http_build_query($filtered_params) ); // Hash query params
         }
     }
-	$file_name = md5( $file_name );// new
-	$shard = $page === '' ? '_home' : substr( $file_name, 0, 1 );// put home page in special _root/_home/ dir
-	// skip for md5
-	// if ($shard === '') {
-	// 	$shard = '_';
-	// 	$file_name = 'index';
-    // }
-	// if ($url_dir === '') {
-    //     $url_dir = '_root';
-    // }
-	// if ( isset($parsed['query']) ) {
-	// 	$file_name .= '_' . preg_replace('/[^a-zA-Z0-9-]/', '_', $parsed['query'] );
-	// }
-	return MC_CACHE_DIR . "/$url_dir/$shard/$file_name";
+    return MC_CACHE_DIR . "/$url_dir/$shard/$page/$file_name";
+}
+
+/**
+ * This sanitizes URLs to be safe directory paths
+ * It's largely un-neccessary as Wordpress already sanitizes slugs, and if the requested URL is wrong, it will just be a 404 and bypassed anyway
+ * This is mainly helful for custom setups... and I think it's just good practice (WP Super Cache has a very heavy sanitization function)
+ * Made to be fairly similar to this code run by sanitize_title() on slugs:
+ * https://github.com/WordPress/wordpress-develop/blob/d56d51dd5b25b599050a7e5ef317875f7b2254a4/src/wp-includes/formatting.php#L2261
+ */
+function mnmlcache_sanitize_path( $path ) {
+    if (!$path) return '';
+	$original = $path;
+	$path = rawurldecode($path);
+	if ( $path !== $original ) {
+		mnmlcache_debug("FORMATTING: path had % encoded characters: $original");
+		$original = $path;
+	}
+	$path = str_replace('//', '/', $path);// preg_replace('/\/+/', '/', $path)
+	if ( $path !== $original ) {
+		mnmlcache_debug("FORMATTING: path had double slashes: $original");
+		$original = $path;
+	}
+	$path = strtolower( $path );
+	if ( $path !== $original ) {
+		mnmlcache_debug("FORMATTING: path had upper case: $original");
+		$original = $path;
+	}
+	// $path = str_replace( '.', '-', $path );
+	// $path = preg_replace( '/\s+/', '-', $path );
+	$path = preg_replace( '/[^a-z0-9_]/', '-', $path );
+	$path = preg_replace( '/-+/', '-', trim( $path, '-' ) );
+	
+    return $path ?: 'unnamed';
 }
 
 /**

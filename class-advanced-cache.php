@@ -10,39 +10,112 @@ defined('ABSPATH') || exit;
 class MC_Advanced_Cache {
 
 	public function setup() {
-		add_action('pre_post_update', [$this, 'purge_post_on_update'], 10, 1);
-		add_action('save_post', [$this, 'purge_post_on_update'], 10, 1);
-		add_action('wp_trash_post', [$this, 'purge_post_on_update'], 10, 1);
+		// wp_after_insert_post would be a better hook, since it can be bypassed for bulk operations, but the permalink is wrong at that point for renamed or trashed posts
+		add_action('pre_post_update', [$this, 'purge_post_on_update'], 10, 2);
+		add_action('wp_trash_post', [$this, 'purge_post_on_trash'], 10, 2);
 		add_action('wp_set_comment_status', [$this, 'purge_post_on_comment_status_change'], 10);
 	}
 
+	/**
+	 * Every time a comments status changes, purge it's parent posts cache
+	 *
+	 * @param  int $comment_id Comment ID.
+	 */
+	public function purge_post_on_comment_status_change($comment_id) {
+		$comment = get_comment($comment_id);
+		$this->cache_purge( false, $comment->comment_post_ID );
+	}
+
+	public function pre_post_update( $post_id, $data ) {
+		mnmlcache_debug(__FUNCTION__);
+		mnmlcache_debug($data);
+		$post = get_post($post_id);
+		$url = get_permalink($post_id);
+		mnmlcache_debug($url);
+	}
+	/**
+	 * Automatically purge all file based page cache on post changes
+	 *
+	 * @param  int $post_id Post id.
+	 */
+	public function purge_post_on_update($post_id, $data=null) {
+
+		if ( ! $post ) $post = get_post($post_id);
+
+		mnmlcache_debug(__FUNCTION__);
+		mnmlcache_debug($data);
+		mnmlcache_debug($post);
+
+		if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+			mnmlcache_debug(__FUNCTION__ . ": doing auto save");
+			return;
+		}
+
+		if ('revision' === $post->post_type) {
+			mnmlcache_debug(__FUNCTION__ . ": post type revision");
+			return;
+		}
+		
+		if (!current_user_can('edit_post', $post_id) && (!defined('DOING_CRON') || !DOING_CRON)) {
+			mnmlcache_debug(__FUNCTION__ . ": user doesnt have permission");
+			return;
+		}
+
+		// Do not purge if this post was not published already (at this point $post is the data before save, $data is the new data (but in an array form)
+		if ('publish' !== $post->post_status) return;
+		if ('trash' === $data['post_status']) return;
+
+		$this->cache_purge( false, $post_id );
+	}
+
+	public function purge_post_on_trash( $post_id, $previous_status=null ) {
+
+		if ( 'publish' !== $previous_status ) {
+			return;
+		}
+		if (!current_user_can('delete_post', $post_id) && (!defined('DOING_CRON') || !DOING_CRON)) {
+			return;
+		}
+		$this->cache_purge(false, $post_id);
+		mnmlcache_debug("Purged cache for deleted post ID: $post_id");
+	}
 
 	/**
 	 * Clear whole cache or one url
 	 */
-	public function cache_purge( $url = false ) {
-
-		if ( false === $url ) {
-
-			$this->empty_dir( MC_CACHE_DIR );
-
-			wp_cache_flush();
-
+	public function cache_purge($url = false, $post_id = 0) {
+		if ($url === false && $post_id === 0) {
+			$this->empty_dir(MC_CACHE_DIR . '/');
+			wp_cache_clear();
 			mnmlcache_cloudflare_purge_all();
-
-		} else {
-			
-			$url_path = get_url_path($url);
-			
-			if (file_exists($url_path)) unlink($url_path);
-			if (file_exists($url_path . ".gzip")) unlink($url_path . ".gzip");
-			if (file_exists($url_path . ".json")) unlink($url_path . ".json");
-			
-			if (defined('WP_DEBUG') && WP_DEBUG) {
-				mnmlcache_debug("mnml cache: Purged cache for URL: $url");
-			}
-			mnmlcache_cloudflare_purge_urls([$url]);
+			mnmlcache_debug("Purged entire cache directory");
+			return true;
 		}
+
+		if ($post_id) {
+			$url = get_permalink($post_id);
+			if (!$url) {
+				mnmlcache_debug("Couldn't find page for cache purge by post_id: $post_id");
+				return false;
+			}
+		}
+
+		if (!$url) {
+			mnmlcache_debug("No URL provided for cache purge, post_id: $post_id");
+			return false;
+		}
+
+		$cache_dir = get_url_path($url, true);
+		$success = false;
+		if (is_dir($cache_dir)) {
+			$success = $this->empty_dir($cache_dir, true);
+		}
+		mnmlcache_cloudflare_purge_urls([$url]);
+		mnmlcache_debug($success
+			? "Purged cache for URL: $url, post_id: $post_id ($cache_dir)"
+			: "Failed to purge cache for URL: $url, post_id: $post_id (directory $cache_dir not found)");
+		
+		return $success;
 	}
 
 	/**
@@ -90,60 +163,23 @@ class MC_Advanced_Cache {
 
 
 	/**
-	 * Every time a comments status changes, purge it's parent posts cache
-	 *
-	 * @param  int $comment_id Comment ID.
-	 */
-	public function purge_post_on_comment_status_change($comment_id) {
-
-		$comment = get_comment($comment_id);
-		$post_id = $comment->comment_post_ID;
-		$self->cache_purge( get_permalink( $post_id ) );
-	}
-
-	/**
-	 * Automatically purge all file based page cache on post changes
-	 *
-	 * @param  int $post_id Post id.
-	 */
-	public function purge_post_on_update($post_id) {
-
-		$post = get_post($post_id);
-
-		// Do not purge the cache if it's an autosave or it is updating a revision.
-		if ((defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || 'revision' === $post->post_type) {
-			return;
-
-			// Do not purge the cache if the user cannot edit the post.
-		} elseif (! current_user_can('edit_post', $post_id) && (! defined('DOING_CRON') || ! DOING_CRON)) {
-			return;
-
-			// Do not purge the cache if the user is editing an unpublished post.
-		} elseif ('draft' === $post->post_status) {
-			return;
-		}
-
-		$self->cache_purge();
-	}
-
-	/**
 	 * Delete file for clean up
 	 *
 	 * @return bool
 	 */
 	public function clean_up() {
 
-		$ret = true;
+		$success = true;
 
 		if (! @unlink(WP_CONTENT_DIR . '/advanced-cache.php')) {
-			$ret = false;
+			$success = false;
 		}
 
 		if (! @rmdir(WP_CONTENT_DIR . '/cache/mnml-cache')) {
-			$ret = false;
+			$success = false;
 		}
 
-		return $ret;
+		return $success;
 	}
 
 

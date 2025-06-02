@@ -37,6 +37,15 @@ class MC_Settings {
 			'enable_url_exemption_regex' => [],
 			'cache_exception_urls' => [ 'type' => 'code' ],
 			'cache_only_urls' => [ 'type' => 'code' ],
+			'sharding_method' => [
+				'type' => 'select',
+				'options' => [
+					'1-letter' => '1-Letter (e.g., p/purl-seafarer/)',
+					'2-letter' => '2-Letter (e.g., pu/purl-seafarer/, recommended)',
+					'md5' => 'Full MD5 (e.g., a/<hash>/, max performance)',
+				],
+				'desc' => 'Sharding method for cache directories. 2-Letter is recommended for most sites, balancing readability and performance. Full MD5 is for high-performance sites where debugging is not needed.',
+			],
 			'enable_debugging' => [],
 		];
 

@@ -95,7 +95,7 @@ function output_handler( $buffer, $flags ) {
 	}
 	
 	global $post;
-	if ( ! empty( $post->post_password ) ) {
+	if ( ! empty( $post->post_password ) && is_singular() ) {// this can technically trip up if its an index page and last post was password protected... why doesnt wp super cache check this?
 		mnmlcache_debug("Page is password protected");
 		return $buffer;
 	}
@@ -148,23 +148,22 @@ function output_handler( $buffer, $flags ) {
 	}
 
 	$path = get_url_path();
-	$dirs = explode( '/', $path );
-	$file_name = array_pop( $dirs );
-	$dir_path = array_shift( $dirs );
-
-	foreach ( $dirs as $dir ) {
-		$dir_path .= '/' . $dir;
-		if ( ! file_exists( $dir_path ) && ! @mkdir( $dir_path ) ) {
-			mnmlcache_debug("Cannot create directory in cache path: " . $dir_path);
-			return $buffer;
-		}
-	}
+    $dir_path = dirname($path);
+	mnmlcache_debug( $path );
+    if (!file_exists($dir_path) && !mkdir($dir_path, 0755, true)) {
+        mnmlcache_debug("Cannot create directory in cache path: $dir_path");
+        return $buffer;
+    }
 
 	// Save the response body.
 	if ( ! empty( $GLOBALS['mnmlcache_config']['enable_gzip_compression'] ) && function_exists( 'gzencode' ) && strlen( $buffer ) > 999 ) {
 		file_put_contents( $path . '.gzip', gzencode( $buffer, 3 ) );
 	} else {
 		file_put_contents( $path, $buffer );
+	}
+
+	if ( !empty( $GLOBALS['mnmlcache_config']['enable_debugging'] ) ) {
+		file_put_contents( MC_CACHE_DIR . "/urls.tsv", "{$_SERVER['REQUEST_URI']}\t" . substr( $path, strlen( MC_CACHE_DIR ) ) . "\n", FILE_APPEND | LOCK_EX );
 	}
 
 	if ( ! empty( $GLOBALS['mnmlcache_config']['restore_headers'] ) ) {
