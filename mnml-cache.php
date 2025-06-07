@@ -51,6 +51,7 @@ add_filter( 'plugin_action_links', __NAMESPACE__ . '\filter_plugin_action_links'
  */
 function deactivate() {
 	require_once __DIR__ . '/class-advanced-cache.php';
+	require_once __DIR__ . '/cloudflare.php';
 	MC_Advanced_Cache::factory()->cache_purge();
 	MC_Advanced_Cache::factory()->clean_up();
 	MC_Advanced_Cache::factory()->toggle_caching( false );
@@ -67,6 +68,8 @@ add_action( 'deactivate_' . plugin_basename( __FILE__ ), __NAMESPACE__ . '\deact
  *  or even trigger that uninstall function
  */
 function uninstall() {
+	require_once __DIR__ . '/class-advanced-cache.php';
+	require_once __DIR__ . '/cloudflare.php';
 	// MC_Advanced_Cache::factory()->clean_up();
 	// MC_Advanced_Cache::factory()->toggle_caching( false );
 	MC_Settings::factory()->clean_up();
