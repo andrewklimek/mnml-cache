@@ -40,7 +40,7 @@ class MC_Advanced_Cache {
 	 */
 	public function purge_post_on_update($post_id, $data=null) {
 
-		if ( ! $post ) $post = get_post($post_id);
+		$post = get_post($post_id);
 
 		mnmlcache_debug(__FUNCTION__);
 		mnmlcache_debug($data);
