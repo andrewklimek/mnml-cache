@@ -26,13 +26,6 @@ class MC_Advanced_Cache {
 		$this->cache_purge( false, $comment->comment_post_ID );
 	}
 
-	public function pre_post_update( $post_id, $data ) {
-		mnmlcache_debug(__FUNCTION__);
-		mnmlcache_debug($data);
-		$post = get_post($post_id);
-		$url = get_permalink($post_id);
-		mnmlcache_debug($url);
-	}
 	/**
 	 * Automatically purge all file based page cache on post changes
 	 *
@@ -42,9 +35,9 @@ class MC_Advanced_Cache {
 
 		$post = get_post($post_id);
 
-		mnmlcache_debug(__FUNCTION__);
-		mnmlcache_debug($data);
-		mnmlcache_debug($post);
+		// mnmlcache_debug(__FUNCTION__);
+		// mnmlcache_debug($data);
+		// mnmlcache_debug($post);
 
 		if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
 			mnmlcache_debug(__FUNCTION__ . ": doing auto save");

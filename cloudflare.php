@@ -20,7 +20,13 @@ function cloudflare_purge( $urls=false ) {
         return false;
     }
 
-    $body = $urls ? ['files' => array_map('home_url', $urls)] : ['purge_everything' => true];
+    if ( $urls ) {
+        $body = ['files' => array_map( function($url) {
+            return substr( $url, 0, 4 ) === 'http' ? $url : home_url($url);
+        }, $urls) ];
+    } else {
+        $body = ['purge_everything' => true];
+    }
 
     $response = wp_remote_post("https://api.cloudflare.com/client/v4/zones/$zone_id/purge_cache", [
         'headers' => [
@@ -38,6 +44,7 @@ function cloudflare_purge( $urls=false ) {
         mnmlcache_debug('Page Cache Plugin: Cloudflare purge failed: ' . wp_remote_retrieve_body($response));
         return false;
     }
+    mnmlcache_debug('Page Cache Plugin: Cloudflare purged ' . print_r( $body, true ) );
     return true;
 }
 
