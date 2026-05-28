@@ -195,6 +195,7 @@ function serve() {
 	}
 
 	header( 'X-Mnml-Cache: HIT' );
+	// header_remove('X-Turbo-Charged-By');// doesn't seem to work
 
 	@readfile( $path );
 	exit;
