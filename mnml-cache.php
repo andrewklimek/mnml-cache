@@ -1,8 +1,8 @@
 <?php
 /*
 Plugin Name: Mnml Cache
-Plugin URI:  https://github.com/andrewklimek/mnml-contact/
-Description: 
+Plugin URI:  https://github.com/andrewklimek/mnml-cache/
+Description: Minimal yet powerful WordPress page cache with Cloudflare integration
 Author:      Andrew J Klimek
 Author URI:  https://andrewklimek.com
 License:     GPL2
