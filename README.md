@@ -24,9 +24,8 @@ Much lighter and more transparent than WP Super Cache, W3 Total Cache, or Cloudf
 
 Test with incognito vs logged-in sessions.
 
-## Key Files
+## Header Respect & Common Issues
 
-- `advanced-cache.php` — Early bootstrap
-- `serve.php` — Core caching logic
-- `cloudflare.php` — Purge integration
+Mnml Cache is obedient to your site's `Cache-Control` and `Expires` headers.  If a plugin adds `no-cache` or `no-store` headers, it will not be cached.
 
+If you see a page isn't being cached (for a logged-out visitor) and you see `Expires: Thu, 19 Nov 1981 08:52:00 GMT` header (that specific date), it almost always means a PHP session was started on the frontend (via `session_start()` or `session_cache_limiter()`) by some plugin, likely one that tracks visitors.
