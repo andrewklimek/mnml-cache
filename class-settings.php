@@ -255,6 +255,15 @@ class MC_Settings {
 			return;
 		}
 
+		if ( ! empty( $_GET['page'] ) && 'mnml-cache' === $_GET['page'] ) {
+			$verify_file_access = $this->verify_file_access();
+			if ( is_array( $verify_file_access ) ) {
+				update_option( 'mnmlcache_notices', array_map( 'sanitize_text_field', $verify_file_access ), true );
+			} else {
+				delete_option( 'mnmlcache_notices' );
+			}
+		}
+
 		$setting_file = 'options-general.php';
 		$notices = get_option( 'mnmlcache_notices', [] );
 		$config = $GLOBALS['mnmlcache_config'];
@@ -326,6 +335,18 @@ class MC_Settings {
 		if ( function_exists( 'clearstatcache' ) ) @clearstatcache();
 
 		$errors = [];
+		$cache_dir = dirname( MC_CACHE_DIR );
+
+		// Try to create the cache directory tree so a missing directory is not treated as writable.
+		if ( ! file_exists( $cache_dir ) && ! @mkdir( $cache_dir, 0755, true ) ) {
+			$errors[] = 'cache';
+			return $errors;
+		}
+
+		if ( ! file_exists( MC_CACHE_DIR ) && ! @mkdir( MC_CACHE_DIR, 0755, true ) ) {
+			$errors[] = 'cache';
+			return $errors;
+		}
 
 		// Check wp-config.php
 		if ( ! @is_writable( ABSPATH . 'wp-config.php' ) && ! @is_writable( ABSPATH . '../wp-config.php' ) ) {
@@ -338,7 +359,7 @@ class MC_Settings {
 		}
 
 		// Check cache directory, parent, or grandparent
-		if ( ! @is_writable( MC_CACHE_DIR ) && ! @is_writable( dirname( MC_CACHE_DIR ) ) && ! @is_writable( dirname( dirname( MC_CACHE_DIR ) ) ) ) {
+		if ( ! is_dir( MC_CACHE_DIR ) || ( ! @is_writable( MC_CACHE_DIR ) && ! @is_writable( dirname( MC_CACHE_DIR ) ) && ! @is_writable( dirname( dirname( MC_CACHE_DIR ) ) ) ) ) {
 			$errors[] = 'cache';
 		}
 
